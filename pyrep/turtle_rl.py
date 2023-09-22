@@ -9,6 +9,7 @@ from pyrep import PyRep
 from pyrep.robots.mobiles.turtlebot import TurtleBot
 from pyrep.objects.shape import Shape
 from pyrep.const import PrimitiveShape
+from pyrep.objects.proximity_sensor import ProximitySensor
 import numpy as np
 
 SCENE_FILE = join(dirname(abspath(__file__)),
@@ -30,6 +31,12 @@ class NavigationEnv(object):
                       color=[1.0, 0.1, 0.1],
                       static=True, respondable=False)
         self.starting_pose = self.agent.get_2d_pose()
+        self.front_sensor = ProximitySensor(78)
+        # self.front_sensor_handle = 78
+        self.left_sensor = ProximitySensor(80)
+        # self.left_sensor_handle = 80
+        self.right_sensor = ProximitySensor(79)
+        # self.right_sensor_handle = 79
 
     def _get_state(self):
         # falta ler os sensores pelo menos
