@@ -57,6 +57,14 @@ class NavigationEnv(object):
         tx, ty, tz = self.target.get_position()
         # Reward is negative distance to target
         reward = -np.sqrt((robot_x - tx) ** 2 + (robot_y - ty) ** 2)
+
+        # sensor reads
+        print(self.front_sensor.read())
+        print(self.left_sensor.read())
+        print(self.right_sensor.read())
+
+
+
         return reward, self._get_state()
 
     def shutdown(self):
