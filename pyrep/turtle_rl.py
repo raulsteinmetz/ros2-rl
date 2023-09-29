@@ -4,6 +4,11 @@ turtle rl - turtle bot deep rl env attempt
 
 '''
 
+from agent import Agent
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+
 from os.path import dirname, join, abspath
 from pyrep import PyRep
 from pyrep.robots.mobiles.turtlebot import TurtleBot
@@ -16,8 +21,8 @@ from os import system
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
 POS_MIN, POS_MAX = [0.8, -0.2, 0.05], [1.0, 0.2, 0.05]
-EPISODES = 5
-EPISODE_LENGTH = 1500
+EPISODES = 20
+EPISODE_LENGTH = 2500
 
 class NavigationEnv(object):
     def __init__(self):
@@ -74,41 +79,82 @@ class NavigationEnv(object):
         robot_x, robot_y, yaw = self.agent.get_2d_pose()
         tx, ty, tz = self.target.get_position()
         reward = -np.sqrt((robot_x - tx) ** 2 + (robot_y - ty) ** 2)
-        return reward, self._get_state()
+
+        # env finishes when the robot is close enough to the target
+        done = False
+        if reward > -0.5:
+            done = True
+
+        return reward, self._get_state(), done
 
     def shutdown(self):
         self.pr.stop()
         self.pr.shutdown()
 
 
-class Agent(object):
-
-    def act(self, state):
-        del state
-        return [2.0, 5.0]
-
-    def learn(self, replay_buffer):
-        pass
 
 
+# To store reward history of each episode
+ep_reward_list = []
+# To store average reward history of last few episodes
+avg_reward_list = []
 
-env = NavigationEnv()
-agent = Agent()
-replay_buffer = []
+def main():
+    env = NavigationEnv()
+    critic_lr = 0.002
+    actor_lr = 0.001
 
-for e in range(EPISODES):
+    # Discount factor for future rewards
+    gamma = 0.99
+    # Used to update target networks
+    tau = 0.005
 
-    print('Starting episode %d' % e)
-    state = env.reset()
-    for i in range(EPISODE_LENGTH):
-        action = agent.act(state)
-        system('clear')
-        print('state: ', state)
-        print('action: ', action)
-        reward, next_state = env.step(action)
-        replay_buffer.append((state, action, reward, next_state))
-        state = next_state
-        agent.learn(replay_buffer)
+    state_space = 7
+    action_space = 2
+    upper_bound = 5.0
+    lower_bound = 0.0
 
-print('Done!')
-env.shutdown()
+    agent = Agent(state_space, action_space, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
+
+    for e in range(EPISODES):
+        episodic_reward = 0
+        prev_state = env.reset()
+        i = 0
+        done = False
+        while not done:
+            tf_prev_state = tf.expand_dims(tf.convert_to_tensor(prev_state), 0)
+            action = agent.policy(tf_prev_state)
+
+            action = [action[0][0], action[0][1]]
+
+            print(action)
+
+
+            reward, state, done = env.step(action)
+
+            if i > EPISODE_LENGTH:
+                done = True
+
+            agent.mem.record((prev_state, action, reward, state))
+
+            agent.learn()
+            agent.update_target()
+
+            i += 1
+
+        ep_reward_list.append(episodic_reward)
+
+        # Mean of last 40 episodes
+        avg_reward = np.mean(ep_reward_list[-10:])
+        print("Episode * {} * Avg Reward is ==> {}".format(i, avg_reward))
+        avg_reward_list.append(avg_reward)
+
+    # Plotting graph
+    # Episodes versus Avg. Rewards
+    plt.plot(avg_reward_list)
+    plt.xlabel("Episode")
+    plt.ylabel("Avg. Epsiodic Reward")
+    plt.savefig('result.png')  
+
+if __name__ == '__main__':
+    main()

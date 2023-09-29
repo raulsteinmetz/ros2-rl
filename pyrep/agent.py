@@ -44,7 +44,7 @@ def get_critic(state_space, action_space):
 class Agent:
     def __init__(self, state_space, action_space, action_high,
                  action_low, gamma, tau, critic_lr, actor_lr, noise_std):
-        self.mem = Buffer(state_space, action_space, 100000, 256)
+        self.mem = Buffer(state_space, action_space, 1000000, 512)
         self.actor = get_actor(state_space, action_high, action_space)
         self.critic = get_critic(state_space, action_space)
 
