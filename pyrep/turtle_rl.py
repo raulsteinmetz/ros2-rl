@@ -34,27 +34,34 @@ class NavigationEnv(object):
         self.starting_pose = self.agent.get_2d_pose()
 
 
-        self.infra1 = ProximitySensor(114)
-        self.infra2 = ProximitySensor(115)
-        self.infra3 = ProximitySensor(116)
-        self.infra4 = ProximitySensor(117)
-        self.infra5 = ProximitySensor(118)
-
-        # self.front_sensor_handle = 78
-        # self.left_sensor_handle = 80
-        # self.right_sensor_handle = 79
+        self.infra1 = ProximitySensor(111)
+        self.infra2 = ProximitySensor(112)
+        self.infra3 = ProximitySensor(113)
+        self.infra4 = ProximitySensor(114)
+        self.infra5 = ProximitySensor(115)
 
     def _get_state(self):
-        # falta ler os sensores pelo menos
-        return np.concatenate([self.agent.get_2d_pose(),
+        # should not be positions, but distance and angle between robot and target
+        print(self.agent.get_2d_pose())
+        print(self.target.get_position())
+        state = np.concatenate([self.agent.get_2d_pose(),
                                self.target.get_position()])
+        
+        return np.concatenate([state, 
+                               [self.infra1.read(),
+                                self.infra2.read(),
+                                self.infra3.read(), 
+                                self.infra4.read(), 
+                                self.infra5.read()]])
     
     def reset(self):
         # Get a random position within a cuboid and set the target position
         pos = list(np.random.uniform(POS_MIN, POS_MAX))
         self.target.set_position(pos)
         self.agent.set_2d_pose(self.starting_pose)
-        return self._get_state()
+        state = np.concatenate([self.agent.get_2d_pose(),
+                                   self.target.get_position()])
+        return np.concatenate([state, [-1, -1, -1, -1, -1]])
 
     def step(self, action):
         self.agent.set_joint_target_velocities(action)  # Execute action on the wheels?
@@ -63,15 +70,6 @@ class NavigationEnv(object):
         tx, ty, tz = self.target.get_position()
         # Reward is negative distance to target
         reward = -np.sqrt((robot_x - tx) ** 2 + (robot_y - ty) ** 2)
-
-        # sensor reads
-        system('clear')
-        print(self.infra1.read())
-        print(self.infra2.read())
-        print(self.infra3.read())
-        print(self.infra4.read())
-        print(self.infra5.read())
-
 
 
         return reward, self._get_state()
@@ -101,6 +99,8 @@ for e in range(EPISODES):
     print('Starting episode %d' % e)
     state = env.reset()
     for i in range(EPISODE_LENGTH):
+        system('clear')
+        print('Current state:', state)
         action = agent.act(state)
         reward, next_state = env.step(action)
         replay_buffer.append((state, action, reward, next_state))
