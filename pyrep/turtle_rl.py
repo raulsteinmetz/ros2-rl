@@ -22,7 +22,7 @@ SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
 POS_MIN, POS_MAX = [-2.0, -2.0, 0.05], [2.0, 2.0, 0.05]
 EPISODES = 1000
-EPISODE_LENGTH = 10
+EPISODE_LENGTH = 1000 #make it more
 
 class NavigationEnv(object):
     def __init__(self):
@@ -76,20 +76,17 @@ class NavigationEnv(object):
     def step(self, action):
         self.agent.set_joint_target_velocities(action)
         self.pr.step()
-        robot_x, robot_y, yaw = self.agent.get_2d_pose()
-        tx, ty, tz = self.target.get_position()
 
         # negative reward for distance
-        reward = -self._get_state()[0]
-        
-        # positive reward for facing the target
-        if np.abs(self._get_state()[1]) < 1:
-            reward += 1/np.abs(self._get_state()[1])
+        reward = -self._get_state()[0] * 0.01
 
         # env finishes when the robot is close enough to the target
         done = False
-        if self._get_state()[0] < 0.1:
+        if self._get_state()[0] < 0.5:
+            reward = 200
             done = True
+
+        
 
         return reward, self._get_state(), done
 
@@ -117,10 +114,12 @@ def main():
 
     state_space = 7
     action_space = 2
-    upper_bound = 5.0
+    upper_bound = 1.0
     lower_bound = 0.0
 
     agent = Agent(state_space, action_space, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
+    
+    avg_reward = 0
 
     for e in range(EPISODES):
         episodic_reward = 0
@@ -132,6 +131,7 @@ def main():
             action = agent.policy(tf_prev_state)
 
             action = [action[0][0], action[0][1]]
+
 
             reward, state, done = env.step(action)
 
@@ -147,6 +147,12 @@ def main():
 
             i += 1
             episodic_reward += reward
+
+            system('clear')
+            print("Episode * {} * Avg Reward is ==> {}".format(e, avg_reward))
+            print(f'State: {state}')
+            print(f'Action: {action}, Reward: {reward}')
+
 
         ep_reward_list.append(episodic_reward)
 

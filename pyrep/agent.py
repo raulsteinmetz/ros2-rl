@@ -22,12 +22,12 @@ def get_actor(state_space, action_high, action_space):
 def get_critic(state_space, action_space):
     # State as input
     state_input = keras.layers.Input(shape=(state_space))
-    state_out = keras.layers.Dense(16, activation="relu")(state_input)
-    state_out = keras.layers.Dense(32, activation="relu")(state_out)
+    state_out = keras.layers.Dense(64, activation="relu")(state_input)
+    state_out = keras.layers.Dense(128, activation="relu")(state_out)
 
     # Action as input
     action_input = keras.layers.Input(shape=(action_space))
-    action_out = keras.layers.Dense(32, activation="relu")(action_input)
+    action_out = keras.layers.Dense(128, activation="relu")(action_input)
 
     # Both are passed through seperate layer before concatenating
     concat = keras.layers.Concatenate()([state_out, action_out])
@@ -126,6 +126,7 @@ class Agent:
         sampled_actions = sampled_actions.numpy() + noise
 
         # We make sure action is within bounds
+        # sampled_actions = np.abs(sampled_actions)
         legal_action = np.clip(sampled_actions, self.action_low, self.action_high)
 
         return [np.squeeze(legal_action)]
