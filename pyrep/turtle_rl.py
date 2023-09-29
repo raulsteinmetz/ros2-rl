@@ -20,9 +20,9 @@ from os import system
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
-POS_MIN, POS_MAX = [-15.0, -15.0, 0.05], [15.0, 15.0, 0.05]
+POS_MIN, POS_MAX = [-2.0, -2.0, 0.05], [2.0, 2.0, 0.05]
 EPISODES = 1000
-EPISODE_LENGTH = 500
+EPISODE_LENGTH = 10
 
 class NavigationEnv(object):
     def __init__(self):
