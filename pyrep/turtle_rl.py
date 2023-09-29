@@ -11,12 +11,13 @@ from pyrep.objects.shape import Shape
 from pyrep.const import PrimitiveShape
 from pyrep.objects.proximity_sensor import ProximitySensor
 import numpy as np
+from os import system
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
 EPISODES = 5
-EPISODE_LENGTH = 200
+EPISODE_LENGTH = 1500
 
 class NavigationEnv(object):
     def __init__(self):
@@ -31,11 +32,16 @@ class NavigationEnv(object):
                       color=[1.0, 0.1, 0.1],
                       static=True, respondable=False)
         self.starting_pose = self.agent.get_2d_pose()
-        self.front_sensor = ProximitySensor(78)
+
+
+        self.infra1 = ProximitySensor(114)
+        self.infra2 = ProximitySensor(115)
+        self.infra3 = ProximitySensor(116)
+        self.infra4 = ProximitySensor(117)
+        self.infra5 = ProximitySensor(118)
+
         # self.front_sensor_handle = 78
-        self.left_sensor = ProximitySensor(80)
         # self.left_sensor_handle = 80
-        self.right_sensor = ProximitySensor(79)
         # self.right_sensor_handle = 79
 
     def _get_state(self):
@@ -59,9 +65,12 @@ class NavigationEnv(object):
         reward = -np.sqrt((robot_x - tx) ** 2 + (robot_y - ty) ** 2)
 
         # sensor reads
-        print(self.front_sensor.read())
-        print(self.left_sensor.read())
-        print(self.right_sensor.read())
+        system('clear')
+        print(self.infra1.read())
+        print(self.infra2.read())
+        print(self.infra3.read())
+        print(self.infra4.read())
+        print(self.infra5.read())
 
 
 
@@ -76,7 +85,7 @@ class Agent(object):
 
     def act(self, state):
         del state
-        return [0.5, 1.0]
+        return [2.0, 2.0]
 
     def learn(self, replay_buffer):
         pass
