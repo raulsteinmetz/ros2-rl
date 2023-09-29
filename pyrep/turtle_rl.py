@@ -20,9 +20,9 @@ from os import system
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
-POS_MIN, POS_MAX = [0.8, -0.2, 0.05], [1.0, 0.2, 0.05]
-EPISODES = 20
-EPISODE_LENGTH = 2500
+POS_MIN, POS_MAX = [-15.0, -15.0, 0.05], [15.0, 15.0, 0.05]
+EPISODES = 1000
+EPISODE_LENGTH = 500
 
 class NavigationEnv(object):
     def __init__(self):
@@ -78,11 +78,17 @@ class NavigationEnv(object):
         self.pr.step()
         robot_x, robot_y, yaw = self.agent.get_2d_pose()
         tx, ty, tz = self.target.get_position()
-        reward = -np.sqrt((robot_x - tx) ** 2 + (robot_y - ty) ** 2)
+
+        # negative reward for distance
+        reward = -self._get_state()[0]
+        
+        # positive reward for facing the target
+        if np.abs(self._get_state()[1]) < 1:
+            reward += 1/np.abs(self._get_state()[1])
 
         # env finishes when the robot is close enough to the target
         done = False
-        if reward > -0.5:
+        if self._get_state()[0] < 0.1:
             done = True
 
         return reward, self._get_state(), done
@@ -127,9 +133,6 @@ def main():
 
             action = [action[0][0], action[0][1]]
 
-            print(action)
-
-
             reward, state, done = env.step(action)
 
             if i > EPISODE_LENGTH:
@@ -140,21 +143,24 @@ def main():
             agent.learn()
             agent.update_target()
 
+            # print(f'Action: {action}, Reward: {reward}')
+
             i += 1
+            episodic_reward += reward
 
         ep_reward_list.append(episodic_reward)
 
         # Mean of last 40 episodes
-        avg_reward = np.mean(ep_reward_list[-10:])
-        print("Episode * {} * Avg Reward is ==> {}".format(i, avg_reward))
+        avg_reward = np.mean(ep_reward_list[-5:])
+        print("Episode * {} * Avg Reward is ==> {}".format(e, avg_reward))
         avg_reward_list.append(avg_reward)
 
-    # Plotting graph
-    # Episodes versus Avg. Rewards
-    plt.plot(avg_reward_list)
-    plt.xlabel("Episode")
-    plt.ylabel("Avg. Epsiodic Reward")
-    plt.savefig('result.png')  
+        # Plotting graph
+        # Episodes versus Avg. Rewards
+        plt.plot(avg_reward_list)
+        plt.xlabel("Episode")
+        plt.ylabel("Avg. Epsiodic Reward")
+        plt.savefig('result.png')  
 
 if __name__ == '__main__':
     main()
