@@ -15,7 +15,7 @@ from os import system
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
-POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
+POS_MIN, POS_MAX = [0.8, -0.2, 0.05], [1.0, 0.2, 0.05]
 EPISODES = 5
 EPISODE_LENGTH = 1500
 
@@ -40,13 +40,21 @@ class NavigationEnv(object):
         self.infra4 = ProximitySensor(114)
         self.infra5 = ProximitySensor(115)
 
-    def _get_state(self):
-        # should not be positions, but distance and angle between robot and target
-        print(self.agent.get_2d_pose())
-        print(self.target.get_position())
-        state = np.concatenate([self.agent.get_2d_pose(),
-                               self.target.get_position()])
+    def _get_state(self, reset=False):
+        distance = np.sqrt((self.agent.get_2d_pose()[0] - self.target.get_position()[0])**2
+                            + (self.agent.get_2d_pose()[1] - self.target.get_position()[1])**2)
         
+        robot_angle = self.agent.get_2d_pose()[2]
+        target_position = np.array(self.target.get_position())[:2]
+        delta_vector = target_position - self.agent.get_2d_pose()[:2]
+        angle_between = np.arctan2(delta_vector[1], delta_vector[0]) - robot_angle
+        angle_between = (angle_between + np.pi) % (2 * np.pi) - np.pi
+
+        state = [distance, angle_between]
+        
+        if reset:
+            return np.concatenate([state, [-1 ,-1, -1, -1, -1]])
+
         return np.concatenate([state, 
                                [self.infra1.read(),
                                 self.infra2.read(),
@@ -55,23 +63,17 @@ class NavigationEnv(object):
                                 self.infra5.read()]])
     
     def reset(self):
-        # Get a random position within a cuboid and set the target position
         pos = list(np.random.uniform(POS_MIN, POS_MAX))
         self.target.set_position(pos)
         self.agent.set_2d_pose(self.starting_pose)
-        state = np.concatenate([self.agent.get_2d_pose(),
-                                   self.target.get_position()])
-        return np.concatenate([state, [-1, -1, -1, -1, -1]])
+        return self._get_state(reset=True)
 
     def step(self, action):
-        self.agent.set_joint_target_velocities(action)  # Execute action on the wheels?
-        self.pr.step()  # Step the physics simulation
+        self.agent.set_joint_target_velocities(action)
+        self.pr.step()
         robot_x, robot_y, yaw = self.agent.get_2d_pose()
         tx, ty, tz = self.target.get_position()
-        # Reward is negative distance to target
         reward = -np.sqrt((robot_x - tx) ** 2 + (robot_y - ty) ** 2)
-
-
         return reward, self._get_state()
 
     def shutdown(self):
@@ -83,7 +85,7 @@ class Agent(object):
 
     def act(self, state):
         del state
-        return [2.0, 2.0]
+        return [2.0, 5.0]
 
     def learn(self, replay_buffer):
         pass
@@ -99,9 +101,10 @@ for e in range(EPISODES):
     print('Starting episode %d' % e)
     state = env.reset()
     for i in range(EPISODE_LENGTH):
-        system('clear')
-        print('Current state:', state)
         action = agent.act(state)
+        system('clear')
+        print('state: ', state)
+        print('action: ', action)
         reward, next_state = env.step(action)
         replay_buffer.append((state, action, reward, next_state))
         state = next_state
