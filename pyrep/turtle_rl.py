@@ -22,7 +22,7 @@ SCENE_FILE = join(dirname(abspath(__file__)),
                   'turtle_rl.ttt')
 POS_MIN, POS_MAX = [-2.0, -2.0, 0.05], [2.0, 2.0, 0.05]
 EPISODES = 1000
-EPISODE_LENGTH = 1000 #make it more
+EPISODE_LENGTH = 2500 #make it more
 
 class NavigationEnv(object):
     def __init__(self):
@@ -120,6 +120,7 @@ def main():
     agent = Agent(state_space, action_space, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
     
     avg_reward = 0
+    rewards = []
 
     for e in range(EPISODES):
         episodic_reward = 0
@@ -132,8 +133,9 @@ def main():
 
             action = [action[0][0], action[0][1]]
 
+            faster = [i * 5 for i in action]
 
-            reward, state, done = env.step(action)
+            reward, state, done = env.step(faster)
 
             if i > EPISODE_LENGTH:
                 done = True
@@ -160,10 +162,10 @@ def main():
         avg_reward = np.mean(ep_reward_list[-5:])
         print("Episode * {} * Avg Reward is ==> {}".format(e, avg_reward))
         avg_reward_list.append(avg_reward)
-
+        rewards.append(episodic_reward)
         # Plotting graph
         # Episodes versus Avg. Rewards
-        plt.plot(avg_reward_list)
+        plt.plot(np.arange(len(rewards)), rewards)
         plt.xlabel("Episode")
         plt.ylabel("Avg. Epsiodic Reward")
         plt.savefig('result.png')  
