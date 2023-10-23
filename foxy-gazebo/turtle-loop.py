@@ -50,7 +50,7 @@ class RobotControllerNode(Node):
                 self.call_service_sync(self.unpause_simulation_client, Empty.Request())
                 continue
 
-            sleep(1)
+            sleep(0.001)
 
             print("spinned once")
 
@@ -108,12 +108,12 @@ class RobotControllerNode(Node):
             <link name='link'>
               <collision name='collision'>
                 <geometry>
-                  <sphere><radius>0.5</radius></sphere>
+                  <sphere><radius>0.1</radius></sphere>
                 </geometry>
               </collision>
               <visual name='visual'>
                 <geometry>
-                  <sphere><radius>0.5</radius></sphere>
+                  <sphere><radius>0.1</radius></sphere>
                 </geometry>
               </visual>
             </link>
