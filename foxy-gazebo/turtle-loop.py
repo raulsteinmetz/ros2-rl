@@ -7,6 +7,9 @@ from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
 import random
+from os import system
+
+from util import *
 
 from time import sleep
 
@@ -15,9 +18,9 @@ class RobotControllerNode(Node):
         super().__init__("robot_controller_node")
 
         # Publishers, Subscribers, and Clients
-        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
-        self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
-        self.scan_subscription = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
+        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 1) # might have to ajust the buffers, do not know their influence just yet
+        self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 1)
+        self.scan_subscription = self.create_subscription(LaserScan, '/scan', self.scan_callback, 1)
 
         # Clients to pause and unpause the Gazebo simulation
         self.pause_simulation_client = self.create_client(Empty, '/pause_physics')
@@ -36,15 +39,17 @@ class RobotControllerNode(Node):
         self.odom_data = None
         self.scan_data = None
 
+        # target
+        self.target_y = 0
+        self.target_x = 0
+
         # Start the main RL control loop
         self.rl_control_loop()
 
     def odom_callback(self, msg):
-        print('triggered odom')
         self.odom_data = msg
 
     def scan_callback(self, msg):
-        print('triggered scan')
         self.scan_data = msg
 
     def reset_simulation(self):
@@ -64,7 +69,7 @@ class RobotControllerNode(Node):
 
     def rl_control_loop(self):
         max_episodes = 1000  # for example
-        max_steps_per_episode = 4000  # for example
+        max_steps_per_episode = 500  # for example
 
         for episode in range(max_episodes):
           step = 0
@@ -72,44 +77,125 @@ class RobotControllerNode(Node):
 
           self.reset_simulation()
 
+          # # lidar read out of date bug fix
+          # # wait for lidar to update
+          # self.scan_data = None
+          # while self.scan_data is None:
+          #     rclpy.spin_once(self, timeout_sec=0.5)
+
+
           print('Episode: ', episode)
 
-          # Main loop for reinforcement learning control
           while rclpy.ok() and not done and step < max_steps_per_episode:
-              # Pause the simulation
+              # pause sim
               self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
               if self.scan_data is None or self.odom_data is None:
-                  # If there's no data, there's nothing to do yet, just continue
+                  # waiting for scan and odom data
                   self.call_service_sync(self.unpause_simulation_client, Empty.Request())
                   continue
+              
 
-              sleep(0.001)
+              # state
+              
+              # odom - position of the robot - definitely works
+
+              state = []
+
+              turtle_x = self.odom_data.pose.pose.position.x
+              turtle_y = self.odom_data.pose.pose.position.y
+
+              target_x = self.target_x
+              target_y = self.target_y
+
+              # Extract the quaternion from the message
+              orientation_q = self.odom_data.pose.pose.orientation
+
+              # lidar - think it works
+              lidar_readings = self.scan_data.ranges
 
 
-              linear_vel = 0.5  # These are placeholders and should be decided by your RL algorithm
-              angular_vel = 0.8
+              state.append(turtle_x)
+              state.append(turtle_y)
+              state.append(target_x)
+              state.append(target_y)
+              state.append(orientation_q.x)
+              state.append(orientation_q.y)
+              state.append(orientation_q.z)
+              state.append(orientation_q.w)
+              state += lidar_readings
+
+              # action        
+              linear_vel = 0.6 # should be decided by the agent
+              angular_vel = 0.8 # should be decided by the agent
 
               cmd_vel_msg = Twist()
               cmd_vel_msg.linear.x = linear_vel
               cmd_vel_msg.angular.z = angular_vel
-
-              # Publish the control command
               self.cmd_vel_publisher.publish(cmd_vel_msg)
 
-              # Unpause the simulation for the next step to take effect
+              # unpause sim
               self.call_service_sync(self.unpause_simulation_client, Empty.Request())
+              sleep(0.01)
 
-              # Here you may want to introduce a delay based on your control frequency
-              rclpy.spin_once(self, timeout_sec=0.5)  # Adjust the timing as necessary
+              # pause again
+              self.call_service_sync(self.pause_simulation_client, Empty.Request())
+
+              # new state 
+
+              state_ = []
+
+              turtle_x = self.odom_data.pose.pose.position.x
+              turtle_y = self.odom_data.pose.pose.position.y
+
+              target_x = self.target_x
+              target_y = self.target_y
+
+              # Extract the quaternion from the message
+              orientation_q = self.odom_data.pose.pose.orientation
+
+              # lidar - think it works
+              lidar_readings = self.scan_data.ranges
+
+
+              state_.append(turtle_x)
+              state_.append(turtle_y)
+              state_.append(target_x)
+              state_.append(target_y)
+              state_.append(orientation_q.x)
+              state_.append(orientation_q.y)
+              state_.append(orientation_q.z)
+              state_.append(orientation_q.w)
+              state_ += lidar_readings
+
+              # reward
+
+              # check if distance from target is less than 0.1
+              distance_from_target = math.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2)
+              if distance_from_target < 0.3:
+                  reward = 100
+                  print('ended reached target')
+                  done = True
+              else:
+                  # check colision - bug with lidar readings out of date, ignoring for now
+                  # if min(lidar_readings) < 0.12:
+                  #     reward = -100
+                  #     print('ended collision')
+                  #     done = True
+                  # else: 
+                    reward = -0.1 * distance_from_target
+                    done = False
+
+              
+              # info
+              info = {}
+
+
+              # delay for control (think it is not working properly to be honest)
+              rclpy.spin_once(self, timeout_sec=0.5)
 
               step += 1
 
-              # print('ODOM:\n\n')
-              # print(self.odom_data)
-
-              # print('SCAN:\n\n')
-              # print(self.scan_data)
 
     def call_service_sync(self, client, request):
         # Synchronous service call
@@ -120,19 +206,6 @@ class RobotControllerNode(Node):
         rclpy.spin_until_future_complete(self, future)
         return future.result()
 
-    def control_and_publish(self):
-        if self.scan_data is None:
-            # Don't do anything if no scan data has been received
-            return
-        
-        # Logic for velocity command based on sensor readings can be added here
-        linear_vel = 0.2
-        angular_vel = 0.1
-
-        cmd_vel_msg = Twist()
-        cmd_vel_msg.linear.x = linear_vel
-        cmd_vel_msg.angular.z = angular_vel
-        self.cmd_vel_publisher.publish(cmd_vel_msg)
 
     def spawn_target_in_environment(self):
         # Check if spawn_entity service is available
@@ -141,16 +214,16 @@ class RobotControllerNode(Node):
 
         # Generate random coordinates within a specific range for the sphere's position
         # Note: You should adjust the range to fit the environment of your simulation
-        random_x = random.uniform(-1, 2)  # For example, within [-5.0, 5.0] range
-        random_y = random.uniform(-1, 2)
-        random_z = random.uniform(0.2, 0.2)  # Assuming the ground level is at z=0 and you want the sphere above the ground
+        self.target_x = random.uniform(-1, 2)  # For example, within [-5.0, 5.0] range
+        self.target_y = random.uniform(-1, 2)
+        fixed_z = 0.1  # Fixed z coordinate
 
         # Dynamic SDF with the random position
         sphere_sdf = f"""
         <?xml version='1.0'?>
         <sdf version='1.6'>
           <model name='target_model'>
-            <pose>{random_x} {random_y} {random_z} 0 0 0</pose>
+            <pose>{self.target_x} {self.target_y} {fixed_z} 0 0 0</pose>
             <link name='link'>
               <collision name='collision'>
                 <geometry>
@@ -176,7 +249,7 @@ class RobotControllerNode(Node):
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
 
         if future.result() is not None:
-            self.get_logger().info(f"Entity spawned successfully at coordinates: x={random_x}, y={random_y}, z={random_z}.")
+            self.get_logger().info(f"Entity spawned successfully at coordinates: x={self.target_x}, y={self.target_y}, z={fixed_z}.")
         else:
             self.get_logger().error("Failed to spawn entity.")
 
