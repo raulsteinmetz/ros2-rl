@@ -22,8 +22,8 @@ def rl_control_loop(robot_controller, simulation_manager):
         # which decides the linear and angular velocity based on the current state.
         # For demonstration, we are using constant values.
 
-        linear_vel = 0.2  # This should be decided by your RL algorithm
-        angular_vel = 0.1  # This should be decided by your RL algorithm
+        linear_vel = 0.2
+        angular_vel = 0.1 
 
         robot_controller.control_and_publish(linear_vel, angular_vel)
 
@@ -54,10 +54,6 @@ def main(args=None):
         simulation_manager.destroy_node()
         entity_spawner.destroy_node()
         rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
-
 
 if __name__ == '__main__':
     main()

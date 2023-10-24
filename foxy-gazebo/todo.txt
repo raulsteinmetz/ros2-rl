@@ -1,0 +1,2 @@
+deixar a simulação rolando por uns 10 steps a cada ação performada
+fazer sistema de episodio e spawnar esfera aleatoria

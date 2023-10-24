@@ -1,10 +1,12 @@
 import rclpy
 from rclpy.node import Node
-from std_srvs.srv import Empty  # Service for pausing and unpausing the simulation
+from std_srvs.srv import Empty  # Service for pausing and unpausing the simulation4
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
+from gazebo_msgs.srv import DeleteEntity
+
 from time import sleep
 
 class RobotControllerNode(Node):
@@ -22,53 +24,91 @@ class RobotControllerNode(Node):
         
         # Client to spawn entities in Gazebo
         self.spawn_entity_client = self.create_client(SpawnEntity, '/spawn_entity')
+        # Client to delete entities in Gazebo
+        self.delete_entity_client = self.create_client(DeleteEntity, '/delete_entity')
+
+
+        # Usually, simulation environments provide a service to reset the world or robot
+        self.reset_client = self.create_client(Empty, '/reset_simulation')  # Adjust the service name
 
         # Internal state
         self.odom_data = None
         self.scan_data = None
 
-        # Spawn a target in the environment
-        self.spawn_target_in_environment()
-
         # Start the main RL control loop
         self.rl_control_loop()
 
     def odom_callback(self, msg):
+        print('triggered odom')
         self.odom_data = msg
 
     def scan_callback(self, msg):
+        print('triggered scan')
         self.scan_data = msg
 
+    def reset_simulation(self):
+        """Resets the simulation to start a new episode."""
+
+        # In a typical setup, there's a service call that triggers the simulation environment to reset.
+        req = Empty.Request()
+        while not self.reset_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn('Reset service not available, waiting again...')
+        
+        self.reset_client.call_async(req)
+        self.despawn_target_sphere()
+        self.spawn_target_in_environment()
+
+
+
+
     def rl_control_loop(self):
-        # Main loop for reinforcement learning control
-        while rclpy.ok():
-            # Pause the simulation
-            self.call_service_sync(self.pause_simulation_client, Empty.Request())
+        max_episodes = 1000  # for example
+        max_steps_per_episode = 1500  # for example
 
-            if self.scan_data is None or self.odom_data is None:
-                # If there's no data, there's nothing to do yet, just continue
-                self.call_service_sync(self.unpause_simulation_client, Empty.Request())
-                continue
+        for episode in range(max_episodes):
+          step = 0
+          done = False
 
-            sleep(0.001)
+          self.reset_simulation()
 
-            print("spinned once")
+          print('Episode: ', episode)
 
-            linear_vel = 0.2  # These are placeholders and should be decided by your RL algorithm
-            angular_vel = 0.1
+          # Main loop for reinforcement learning control
+          while rclpy.ok() and not done and step < max_steps_per_episode:
+              # Pause the simulation
+              self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
-            cmd_vel_msg = Twist()
-            cmd_vel_msg.linear.x = linear_vel
-            cmd_vel_msg.angular.z = angular_vel
+              if self.scan_data is None or self.odom_data is None:
+                  # If there's no data, there's nothing to do yet, just continue
+                  self.call_service_sync(self.unpause_simulation_client, Empty.Request())
+                  continue
 
-            # Publish the control command
-            self.cmd_vel_publisher.publish(cmd_vel_msg)
+              sleep(0.001)
 
-            # Unpause the simulation for the next step to take effect
-            self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
-            # Here you may want to introduce a delay based on your control frequency
-            rclpy.spin_once(self, timeout_sec=0.1)  # Adjust the timing as necessary
+              linear_vel = 0.2  # These are placeholders and should be decided by your RL algorithm
+              angular_vel = 0.1
+
+              cmd_vel_msg = Twist()
+              cmd_vel_msg.linear.x = linear_vel
+              cmd_vel_msg.angular.z = angular_vel
+
+              # Publish the control command
+              self.cmd_vel_publisher.publish(cmd_vel_msg)
+
+              # Unpause the simulation for the next step to take effect
+              self.call_service_sync(self.unpause_simulation_client, Empty.Request())
+
+              # Here you may want to introduce a delay based on your control frequency
+              rclpy.spin_once(self, timeout_sec=0.5)  # Adjust the timing as necessary
+
+              step += 1
+
+              # print('ODOM:\n\n')
+              # print(self.odom_data)
+
+              # print('SCAN:\n\n')
+              # print(self.scan_data)
 
     def call_service_sync(self, client, request):
         # Synchronous service call
@@ -132,10 +172,29 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to spawn entity.")
 
+    def despawn_target_sphere(self):
+        # Check if delete_entity service is available
+        while not self.delete_entity_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('DeleteEntity service not available, waiting again...')
+
+        # Request to delete the target sphere
+        request = DeleteEntity.Request()
+        request.name = 'target_sphere'  # Name of the sphere entity to be deleted
+
+        # Call the service
+        future = self.delete_entity_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)  # Wait for the response
+
+        if future.result() is not None and future.result().success:
+            self.get_logger().info("Entity deleted successfully.")
+        else:
+            self.get_logger().error("Failed to delete entity.")
+
 
 def main(args=None):
     rclpy.init(args=args)
     robot_controller_node = RobotControllerNode()
+            
     rclpy.spin(robot_controller_node)
 
     robot_controller_node.destroy_node()
