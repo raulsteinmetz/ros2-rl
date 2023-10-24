@@ -135,6 +135,14 @@ class RobotControllerNode(Node):
         # unpause
         self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
+        # give it some spins to update the lidar and not bug detect collision
+        self.scan_data = None
+        self.odom_data = None
+    
+        while self.scan_data is None or self.odom_data is None:
+            rclpy.spin_once(self, timeout_sec=0.5)
+            sleep(1)
+
         state, _, _, _, _, _ = self.get_state()
 
         return state
@@ -155,9 +163,7 @@ class RobotControllerNode(Node):
             print('Episode ended with collision')
             done = True
             reward = -100
-        else:
-            reward = -0.1 * distance
-        
+
         return reward, done
 
         
@@ -181,18 +187,18 @@ class RobotControllerNode(Node):
 
         agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
 
-        max_episodes = 1000  # for example
+        max_episodes = 3500  # for example
         max_steps_per_episode = 150  # for example
 
+        acum_rwds = []
         
-        acum_reward = 0
         for episode in range(max_episodes):
             step = 0
             done = False
 
 
             state = self.reset_simulation()
-
+            acum_reward = 0
 
             print('Episode: ', episode)
 
@@ -234,6 +240,11 @@ class RobotControllerNode(Node):
                 step += 1
 
             print("Episode * {} * Acumulated Reward is ==> {}".format(episode, acum_reward))
+            acum_rwds.append(acum_reward)
+            plt.plot(acum_rwds)
+            plt.xlabel("Episode")
+            plt.ylabel("Acumulated Reward")
+            plt.savefig('acum_rwds.png')
 
 
     def call_service_sync(self, client, request):
