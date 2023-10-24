@@ -1,3 +1,4 @@
+# env imports
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Empty  # Service for pausing and unpausing the simulation4
@@ -7,11 +8,18 @@ from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
 import random
-from os import system
 
+# neural network imports
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+import matplotlib.pyplot as plt
+from agent import Agent
+
+# other
 from util import *
-
 from time import sleep
+from os import system
 
 class RobotControllerNode(Node):
     def __init__(self):
@@ -52,149 +60,180 @@ class RobotControllerNode(Node):
     def scan_callback(self, msg):
         self.scan_data = msg
 
+    def get_state(self):
+
+        self.scan_data = None
+        self.odom_data = None
+        rclpy.spin_once(self, timeout_sec=0.5)
+
+        # wait for scan and odom read:
+        while self.scan_data is None or self.odom_data is None:
+            rclpy.spin_once(self, timeout_sec=0.5)
+
+        state = []
+
+        turtle_x = self.odom_data.pose.pose.position.x
+        turtle_y = self.odom_data.pose.pose.position.y
+
+        target_x = self.target_x
+        target_y = self.target_y
+
+        # Extract the quaternion from the message
+        orientation_q = self.odom_data.pose.pose.orientation
+
+        # lidar - think it works
+        lidar_readings = self.scan_data.ranges
+
+
+        state.append(turtle_x)
+        state.append(turtle_y)
+        state.append(target_x)
+        state.append(target_y)
+        state.append(orientation_q.x)
+        state.append(orientation_q.y)
+        state.append(orientation_q.z)
+        state.append(orientation_q.w)
+
+        # discretize the lidar readings to only 32
+
+        # Number of equally spaced samples you want
+        num_samples = 32
+
+        # Calculate the step size, we use len(large_vector) - 1 because we are considering indices starting from 0
+        step = (len(lidar_readings) - 1) // (num_samples - 1)
+
+        # Get equally spaced samples
+        lidar_32 = [lidar_readings[i * step] for i in range(num_samples)]
+
+
+        state += lidar_32
+
+        # replace 'inf' with '2' - otherwise lidar will return inf
+        state = [x if x != float('inf') else 2 for x in state]
+
+        return state, turtle_x, turtle_y, target_x, target_y, lidar_32
+            
+
     def reset_simulation(self):
         """Resets the simulation to start a new episode."""
-
+    
         # In a typical setup, there's a service call that triggers the simulation environment to reset.
         req = Empty.Request()
         while not self.reset_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().warn('Reset service not available, waiting again...')
-        
         self.reset_client.call_async(req)
+        
         self.despawn_target_sphere()
+
         self.spawn_target_in_environment()
+        
+        cmd_vel_msg = Twist()
+        cmd_vel_msg.linear.x = 0.0
+        cmd_vel_msg.angular.z = 0.0
+        self.cmd_vel_publisher.publish(cmd_vel_msg)
 
+        # unpause
+        self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
+        state, _, _, _, _, _ = self.get_state()
+
+        return state
+        
+
+    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32):
+        reward = 0
+        done = False
+
+        # distance to target
+        distance = np.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2) 
+
+        if distance < 0.3:
+            print('Episode ended with target reached')
+            done = True
+            reward = 100
+        elif np.min(lidar_32) < 0.19:
+            print('Episode ended with collision')
+            done = True
+            reward = -100
+        else:
+            reward = -0.1 * distance
+        
+        return reward, done
+
+        
 
 
     def rl_control_loop(self):
+        num_states = 40
+        num_actions = 2
+
+        upper_bound = .1
+        lower_bound = -.1
+
+        # Learning rate for actor-critic models
+        critic_lr = 0.002
+        actor_lr = 0.001
+
+        # Discount factor for future rewards
+        gamma = 0.99
+        # Used to update target networks
+        tau = 0.005
+
+        agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
+
         max_episodes = 1000  # for example
-        max_steps_per_episode = 500  # for example
+        max_steps_per_episode = 150  # for example
 
+        
+        acum_reward = 0
         for episode in range(max_episodes):
-          step = 0
-          done = False
-
-          self.reset_simulation()
-
-          # # lidar read out of date bug fix
-          # # wait for lidar to update
-          # self.scan_data = None
-          # while self.scan_data is None:
-          #     rclpy.spin_once(self, timeout_sec=0.5)
+            step = 0
+            done = False
 
 
-          print('Episode: ', episode)
-
-          while rclpy.ok() and not done and step < max_steps_per_episode:
-              # pause sim
-              self.call_service_sync(self.pause_simulation_client, Empty.Request())
-
-              if self.scan_data is None or self.odom_data is None:
-                  # waiting for scan and odom data
-                  self.call_service_sync(self.unpause_simulation_client, Empty.Request())
-                  continue
-              
-
-              # state
-              
-              # odom - position of the robot - definitely works
-
-              state = []
-
-              turtle_x = self.odom_data.pose.pose.position.x
-              turtle_y = self.odom_data.pose.pose.position.y
-
-              target_x = self.target_x
-              target_y = self.target_y
-
-              # Extract the quaternion from the message
-              orientation_q = self.odom_data.pose.pose.orientation
-
-              # lidar - think it works
-              lidar_readings = self.scan_data.ranges
+            state = self.reset_simulation()
 
 
-              state.append(turtle_x)
-              state.append(turtle_y)
-              state.append(target_x)
-              state.append(target_y)
-              state.append(orientation_q.x)
-              state.append(orientation_q.y)
-              state.append(orientation_q.z)
-              state.append(orientation_q.w)
-              state += lidar_readings
+            print('Episode: ', episode)
 
-              # action        
-              linear_vel = 0.6 # should be decided by the agent
-              angular_vel = 0.8 # should be decided by the agent
+            while rclpy.ok() and not done and step < max_steps_per_episode:
+                # pause sim
+                self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
-              cmd_vel_msg = Twist()
-              cmd_vel_msg.linear.x = linear_vel
-              cmd_vel_msg.angular.z = angular_vel
-              self.cmd_vel_publisher.publish(cmd_vel_msg)
+                tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
 
-              # unpause sim
-              self.call_service_sync(self.unpause_simulation_client, Empty.Request())
-              sleep(0.01)
+                action = agent.policy(tf_prev_state)[0]
 
-              # pause again
-              self.call_service_sync(self.pause_simulation_client, Empty.Request())
+                self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
-              # new state 
-
-              state_ = []
-
-              turtle_x = self.odom_data.pose.pose.position.x
-              turtle_y = self.odom_data.pose.pose.position.y
-
-              target_x = self.target_x
-              target_y = self.target_y
-
-              # Extract the quaternion from the message
-              orientation_q = self.odom_data.pose.pose.orientation
-
-              # lidar - think it works
-              lidar_readings = self.scan_data.ranges
+                cmd_vel_msg = Twist()
+                cmd_vel_msg.linear.x = np.abs(float(action[0])) # only forward for now
+                cmd_vel_msg.angular.z = float(action[1])
+                self.cmd_vel_publisher.publish(cmd_vel_msg)
 
 
-              state_.append(turtle_x)
-              state_.append(turtle_y)
-              state_.append(target_x)
-              state_.append(target_y)
-              state_.append(orientation_q.x)
-              state_.append(orientation_q.y)
-              state_.append(orientation_q.z)
-              state_.append(orientation_q.w)
-              state_ += lidar_readings
+                sleep(0.01)
 
-              # reward
+                state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state()
 
-              # check if distance from target is less than 0.1
-              distance_from_target = math.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2)
-              if distance_from_target < 0.3:
-                  reward = 100
-                  print('ended reached target')
-                  done = True
-              else:
-                  # check colision - bug with lidar readings out of date, ignoring for now
-                  # if min(lidar_readings) < 0.12:
-                  #     reward = -100
-                  #     print('ended collision')
-                  #     done = True
-                  # else: 
-                    reward = -0.1 * distance_from_target
-                    done = False
-
-              
-              # info
-              info = {}
+                # pause again
+                self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
 
-              # delay for control (think it is not working properly to be honest)
-              rclpy.spin_once(self, timeout_sec=0.5)
+                # reward
+                reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32)
 
-              step += 1
+                agent.mem.record((state, action, reward, state_))
+                state = state_
+                acum_reward += reward
+
+                agent.learn()
+                agent.update_target()
+
+
+                step += 1
+
+            print("Episode * {} * Acumulated Reward is ==> {}".format(episode, acum_reward))
 
 
     def call_service_sync(self, client, request):
