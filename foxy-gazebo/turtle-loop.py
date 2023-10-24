@@ -6,6 +6,7 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
+import random
 
 from time import sleep
 
@@ -63,7 +64,7 @@ class RobotControllerNode(Node):
 
     def rl_control_loop(self):
         max_episodes = 1000  # for example
-        max_steps_per_episode = 1500  # for example
+        max_steps_per_episode = 4000  # for example
 
         for episode in range(max_episodes):
           step = 0
@@ -86,8 +87,8 @@ class RobotControllerNode(Node):
               sleep(0.001)
 
 
-              linear_vel = 0.2  # These are placeholders and should be decided by your RL algorithm
-              angular_vel = 0.1
+              linear_vel = 0.5  # These are placeholders and should be decided by your RL algorithm
+              angular_vel = 0.8
 
               cmd_vel_msg = Twist()
               cmd_vel_msg.linear.x = linear_vel
@@ -137,14 +138,19 @@ class RobotControllerNode(Node):
         # Check if spawn_entity service is available
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
-        
-        # Request for spawning a sphere
-        request = SpawnEntity.Request()
-        sphere_sdf = """
+
+        # Generate random coordinates within a specific range for the sphere's position
+        # Note: You should adjust the range to fit the environment of your simulation
+        random_x = random.uniform(-1, 2)  # For example, within [-5.0, 5.0] range
+        random_y = random.uniform(-1, 2)
+        random_z = random.uniform(0.2, 0.2)  # Assuming the ground level is at z=0 and you want the sphere above the ground
+
+        # Dynamic SDF with the random position
+        sphere_sdf = f"""
         <?xml version='1.0'?>
         <sdf version='1.6'>
           <model name='target_model'>
-            <pose>1 0 0 0 0 0</pose>
+            <pose>{random_x} {random_y} {random_z} 0 0 0</pose>
             <link name='link'>
               <collision name='collision'>
                 <geometry>
@@ -160,17 +166,22 @@ class RobotControllerNode(Node):
           </model>
         </sdf>
         """
+
+        request = SpawnEntity.Request()
         request.name = 'target_sphere'  # Unique name for the new model
-        request.xml = sphere_sdf  # Model XML
+        request.xml = sphere_sdf  # Model XML with the random position
 
         # Call the service
         future = self.spawn_entity_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
 
         if future.result() is not None:
-            self.get_logger().info("Entity spawned successfully.")
+            self.get_logger().info(f"Entity spawned successfully at coordinates: x={random_x}, y={random_y}, z={random_z}.")
         else:
             self.get_logger().error("Failed to spawn entity.")
+
+        sleep(1) # waiting for it to spawn
+
 
     def despawn_target_sphere(self):
         # Check if delete_entity service is available
@@ -189,6 +200,8 @@ class RobotControllerNode(Node):
             self.get_logger().info("Entity deleted successfully.")
         else:
             self.get_logger().error("Failed to delete entity.")
+
+        sleep(1)
 
 
 def main(args=None):
