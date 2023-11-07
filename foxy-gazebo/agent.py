@@ -3,6 +3,7 @@ from tensorflow import keras
 import numpy as np
 from buffer import Buffer
 from noise import OUActionNoise
+import os
 
 
 def get_actor(state_space, action_high, action_space):
@@ -44,7 +45,7 @@ def get_critic(state_space, action_space):
 class Agent:
     def __init__(self, state_space, action_space, action_high,
                  action_low, gamma, tau, critic_lr, actor_lr, noise_std):
-        self.mem = Buffer(state_space, action_space, 1000000, 512)
+        self.mem = Buffer(state_space, action_space, 10000, 64)
         self.actor = get_actor(state_space, action_high, action_space)
         self.critic = get_critic(state_space, action_space)
 
@@ -140,3 +141,16 @@ class Agent:
 
         for (a, b) in zip(self.target_critic.variables, self.critic.variables):
             a.assign(b * self.tau + a * (1 - self.tau))
+
+
+    def save_models(self, directory="./models"):
+        """Saves the target actor and critic models."""
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        self.target_actor.save_weights(os.path.join(directory, "target_actor.h5"))
+        self.target_critic.save_weights(os.path.join(directory, "target_critic.h5"))
+
+    def load_models(self, directory="./models"):
+        """Loads the target actor and critic models."""
+        self.target_actor.load_weights(os.path.join(directory, "target_actor.h5"))
+        self.target_critic.load_weights(os.path.join(directory, "target_critic.h5"))

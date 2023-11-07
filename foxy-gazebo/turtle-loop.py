@@ -8,6 +8,7 @@ from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
 import random
+import tf2_ros
 
 # neural network imports
 import tensorflow as tf
@@ -20,6 +21,8 @@ from agent import Agent
 from util import *
 from time import sleep
 from os import system
+
+
 
 class RobotControllerNode(Node):
     def __init__(self):
@@ -61,58 +64,58 @@ class RobotControllerNode(Node):
         self.scan_data = msg
 
     def get_state(self):
-
         self.scan_data = None
         self.odom_data = None
         rclpy.spin_once(self, timeout_sec=0.5)
 
-        # wait for scan and odom read:
+        # Wait for scan and odom read:
         while self.scan_data is None or self.odom_data is None:
             rclpy.spin_once(self, timeout_sec=0.5)
 
-        state = []
-
+        # Turtlebot's position
         turtle_x = self.odom_data.pose.pose.position.x
         turtle_y = self.odom_data.pose.pose.position.y
 
+        # Target's position
         target_x = self.target_x
         target_y = self.target_y
 
-        # Extract the quaternion from the message
+        # Extract the quaternion components
         orientation_q = self.odom_data.pose.pose.orientation
+        q_x = orientation_q.x
+        q_y = orientation_q.y
+        q_z = orientation_q.z
+        q_w = orientation_q.w
 
-        # lidar - think it works
+        # Convert quaternion to Euler angles (yaw)
+        siny_cosp = 2 * (q_w * q_z + q_x * q_y)
+        cosy_cosp = 1 - 2 * (q_y * q_y + q_z * q_z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        # Calculate the angle to the target
+        angle_to_target = math.atan2(target_y - turtle_y, target_x - turtle_x) - yaw
+        angle_to_target = math.atan2(math.sin(angle_to_target), math.cos(angle_to_target))
+
+        # Calculate the Euclidean distance to the target
+        distance_to_target = math.sqrt((target_x - turtle_x) ** 2 + (target_y - turtle_y) ** 2)
+
+        # Lidar readings
         lidar_readings = self.scan_data.ranges
 
-
-        state.append(turtle_x)
-        state.append(turtle_y)
-        state.append(target_x)
-        state.append(target_y)
-        state.append(orientation_q.x)
-        state.append(orientation_q.y)
-        state.append(orientation_q.z)
-        state.append(orientation_q.w)
-
-        # discretize the lidar readings to only 32
-
-        # Number of equally spaced samples you want
-        num_samples = 32
-
-        # Calculate the step size, we use len(large_vector) - 1 because we are considering indices starting from 0
+        # Discretize the lidar readings to only 24
+        num_samples = 24
         step = (len(lidar_readings) - 1) // (num_samples - 1)
+        lidar_24 = [lidar_readings[i * step] for i in range(num_samples)]
 
-        # Get equally spaced samples
-        lidar_32 = [lidar_readings[i * step] for i in range(num_samples)]
+        # Replace 'inf' with '2'
+        lidar_24 = [x if x != float('inf') else 2 for x in lidar_24]
+
+        # Construct the state array
+        state = lidar_24 + [distance_to_target, angle_to_target]
+
+        return state, turtle_x, turtle_y, target_x, target_y, lidar_24
 
 
-        state += lidar_32
-
-        # replace 'inf' with '2' - otherwise lidar will return inf
-        state = [x if x != float('inf') else 2 for x in state]
-
-        return state, turtle_x, turtle_y, target_x, target_y, lidar_32
-            
 
     def reset_simulation(self):
         """Resets the simulation to start a new episode."""
@@ -141,7 +144,7 @@ class RobotControllerNode(Node):
     
         while self.scan_data is None or self.odom_data is None:
             rclpy.spin_once(self, timeout_sec=0.5)
-            sleep(1)
+            sleep(0.1)
 
         state, _, _, _, _, _ = self.get_state()
 
@@ -170,7 +173,7 @@ class RobotControllerNode(Node):
 
 
     def rl_control_loop(self):
-        num_states = 40
+        num_states = 26
         num_actions = 2
 
         upper_bound = .1
@@ -187,11 +190,16 @@ class RobotControllerNode(Node):
 
         agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
 
-        max_episodes = 3500  # for example
-        max_steps_per_episode = 150  # for example
+        max_episodes = 5000  # for example
+        max_steps_per_episode = 250  # for example
 
         acum_rwds = []
+        mov_avg_rwds = []
         
+        N = 10 # Window size for moving average, e.g., 100 episodes
+
+        best_moving_average = -np.inf
+
         for episode in range(max_episodes):
             step = 0
             done = False
@@ -204,27 +212,34 @@ class RobotControllerNode(Node):
 
             while rclpy.ok() and not done and step < max_steps_per_episode:
                 # pause sim
+                rclpy.spin_once(self, timeout_sec=0.5)
+
                 self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
 
-                action = agent.policy(tf_prev_state)[0]
+                system('clear')
+                print('distance: ', state[24])
+                print('angle: ', state[25])
 
-                self.call_service_sync(self.unpause_simulation_client, Empty.Request())
+                action = agent.policy(tf_prev_state)[0]
 
                 cmd_vel_msg = Twist()
                 cmd_vel_msg.linear.x = np.abs(float(action[0])) # only forward for now
                 cmd_vel_msg.angular.z = float(action[1])
                 self.cmd_vel_publisher.publish(cmd_vel_msg)
+                rclpy.spin_once(self, timeout_sec=0.5)
 
+                self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
-                sleep(0.01)
+                sleep(0.001)
+
+                rclpy.spin_once(self, timeout_sec=0.5)
 
                 state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state()
 
                 # pause again
                 self.call_service_sync(self.pause_simulation_client, Empty.Request())
-
 
                 # reward
                 reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32)
@@ -241,10 +256,28 @@ class RobotControllerNode(Node):
 
             print("Episode * {} * Acumulated Reward is ==> {}".format(episode, acum_reward))
             acum_rwds.append(acum_reward)
-            plt.plot(acum_rwds)
+
+             # Compute moving average
+            if episode >= N-1:
+                moving_avg = np.mean(acum_rwds[-N:])
+                mov_avg_rwds.append(moving_avg)
+            else:
+                mov_avg_rwds.append(np.mean(acum_rwds[:episode+1]))
+
+            if episode >= N-1:
+                if mov_avg_rwds[-1] > best_moving_average:
+                    best_moving_average = mov_avg_rwds[-1]
+                    agent.save_models()
+                    print("Saving best models with moving average reward {}...".format(best_moving_average))
+
+            # Plot raw rewards and moving average
+            plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
+            plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
             plt.xlabel("Episode")
             plt.ylabel("Acumulated Reward")
+            plt.legend()  # Add legend to the plot
             plt.savefig('acum_rwds.png')
+
 
 
     def call_service_sync(self, client, request):
