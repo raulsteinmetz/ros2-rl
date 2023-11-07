@@ -8,7 +8,6 @@ from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
 import random
-import tf2_ros
 
 # neural network imports
 import tensorflow as tf
@@ -176,8 +175,8 @@ class RobotControllerNode(Node):
         num_states = 26
         num_actions = 2
 
-        upper_bound = .1
-        lower_bound = -.1
+        upper_bound = .5
+        lower_bound = -.5
 
         # Learning rate for actor-critic models
         critic_lr = 0.002
@@ -196,7 +195,7 @@ class RobotControllerNode(Node):
         acum_rwds = []
         mov_avg_rwds = []
         
-        N = 10 # Window size for moving average, e.g., 100 episodes
+        N = 100 # Window size for moving average, e.g., 100 episodes
 
         best_moving_average = -np.inf
 
