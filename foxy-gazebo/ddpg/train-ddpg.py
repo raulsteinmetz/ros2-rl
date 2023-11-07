@@ -175,8 +175,8 @@ class RobotControllerNode(Node):
         num_states = 26
         num_actions = 2
 
-        upper_bound = .5
-        lower_bound = -.5
+        upper_bound = .25
+        lower_bound = -.25
 
         # Learning rate for actor-critic models
         critic_lr = 0.002
