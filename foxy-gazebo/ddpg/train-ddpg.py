@@ -13,14 +13,16 @@ import random
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-import matplotlib.pyplot as plt
 from agent import Agent
+
 
 # other
 from util import *
 from time import sleep
 from os import system
-
+import matplotlib
+matplotlib.use('Agg') # Para não exibir a janela de output ao rodar em WSL
+import matplotlib.pyplot as plt
 
 
 class RobotControllerNode(Node):
