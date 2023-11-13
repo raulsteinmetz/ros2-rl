@@ -60,7 +60,7 @@ class RobotControllerNode(Node):
     def scan_callback(self, msg):
         self.scan_data = msg
 
-    def get_state(self):
+    def get_state(self, linear_vel, angular_vel):
         self.scan_data = None
         self.odom_data = None
         rclpy.spin_once(self, timeout_sec=0.5)
@@ -99,18 +99,18 @@ class RobotControllerNode(Node):
         # Lidar readings
         lidar_readings = self.scan_data.ranges
 
-        # Discretize the lidar readings to only 24
-        num_samples = 24
+        # Discretize the lidar readings to only 10
+        num_samples = 10
         step = (len(lidar_readings) - 1) // (num_samples - 1)
-        lidar_24 = [lidar_readings[i * step] for i in range(num_samples)]
+        lidar_10 = [lidar_readings[i * step] for i in range(num_samples)]
 
-        # Replace 'inf' with '2'
-        lidar_24 = [x if x != float('inf') else 2 for x in lidar_24]
+        # Replace 'inf' with '3.5'
+        lidar_10 = [x if x != float('inf') else 3 for x in lidar_10]
 
         # Construct the state array
-        state = lidar_24 + [distance_to_target, angle_to_target]
+        state = lidar_10 + [distance_to_target, angle_to_target] + [linear_vel, angular_vel]
 
-        return state, turtle_x, turtle_y, target_x, target_y, lidar_24
+        return state, turtle_x, turtle_y, target_x, target_y, lidar_10
 
 
 
@@ -143,7 +143,7 @@ class RobotControllerNode(Node):
             rclpy.spin_once(self, timeout_sec=0.5)
             sleep(0.1)
 
-        state, _, _, _, _, _ = self.get_state()
+        state, _, _, _, _, _ = self.get_state(0, 0)
 
         return state
         
@@ -162,7 +162,7 @@ class RobotControllerNode(Node):
         elif np.min(lidar_32) < 0.19:
             print('Episode ended with collision')
             done = True
-            reward = -100
+            reward = -10
 
         return reward, done
 
@@ -170,25 +170,16 @@ class RobotControllerNode(Node):
 
 
     def rl_control_loop(self):
-        num_states = 26
+        num_states = 14
         num_actions = 2
 
         upper_bound = .25
         lower_bound = -.25
 
-        # Learning rate for actor-critic models
-        critic_lr = 0.002
-        actor_lr = 0.001
-
-        # Discount factor for future rewards
-        gamma = 0.99
-        # Used to update target networks
-        tau = 0.005
-
         agent = Agent(input_dims=[num_states], action_space_high=upper_bound, n_actions=num_actions)
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 250  # for example
+        max_steps_per_episode = 150  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
@@ -227,7 +218,7 @@ class RobotControllerNode(Node):
 
                 rclpy.spin_once(self, timeout_sec=0.5)
 
-                state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state()
+                state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state(cmd_vel_msg.linear.x, cmd_vel_msg.angular.z)
 
                 # pause again
                 self.call_service_sync(self.pause_simulation_client, Empty.Request())
@@ -260,6 +251,10 @@ class RobotControllerNode(Node):
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
 
+
+            if episode == 1:
+                agent.save_models()
+
             # Plot raw rewards and moving average
             plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
             plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
@@ -281,14 +276,15 @@ class RobotControllerNode(Node):
 
 
     def spawn_target_in_environment(self):
+        print('SASQUE')
         # Check if spawn_entity service is available
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
         # Generate random coordinates within a specific range for the sphere's position
         # Note: You should adjust the range to fit the environment of your simulation
-        self.target_x = random.uniform(-1, 2)  # For example, within [-5.0, 5.0] range
-        self.target_y = random.uniform(-1, 2)
+        self.target_x = random.uniform(-2, 2)  # For example, within [-5.0, 5.0] range
+        self.target_y = random.uniform(-2, 2)
         fixed_z = 0.1  # Fixed z coordinate
 
         # Dynamic SDF with the random position
@@ -319,6 +315,7 @@ class RobotControllerNode(Node):
 
         # Call the service
         future = self.spawn_entity_client.call_async(request)
+
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
 
         if future.result() is not None:
@@ -326,7 +323,9 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to spawn entity.")
 
-        sleep(1) # waiting for it to spawn
+
+        sleep(0.1)
+
 
 
     def despawn_target_sphere(self):
@@ -347,7 +346,7 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to delete entity.")
 
-        sleep(1)
+        # sleep(1)
 
 
 def main(args=None):

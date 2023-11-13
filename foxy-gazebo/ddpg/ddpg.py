@@ -49,7 +49,7 @@ class OUActionNoise:
 
 
 class Buffer:
-    def __init__(self, buffer_capacity=100000, batch_size=64):
+    def __init__(self, buffer_capacity=30000, batch_size=40):
         # Number of "experiences" to store at max
         self.buffer_capacity = buffer_capacity
         # Num of tuples to train on.
@@ -142,7 +142,7 @@ def get_actor():
     last_init = tf.random_uniform_initializer(minval=-0.003, maxval=0.003)
 
     inputs = layers.Input(shape=(num_states,))
-    out = layers.Dense(256, activation="relu")(inputs)
+    out = layers.Dense(150, activation="relu")(inputs)
     out = layers.Dense(256, activation="relu")(out)
     outputs = layers.Dense(1, activation="tanh", kernel_initializer=last_init)(out)
 
@@ -165,7 +165,7 @@ def get_critic():
     # Both are passed through seperate layer before concatenating
     concat = layers.Concatenate()([state_out, action_out])
 
-    out = layers.Dense(256, activation="relu")(concat)
+    out = layers.Dense(150, activation="relu")(concat)
     out = layers.Dense(256, activation="relu")(out)
     outputs = layers.Dense(1)(out)
 
@@ -203,8 +203,8 @@ target_actor.set_weights(actor_model.get_weights())
 target_critic.set_weights(critic_model.get_weights())
 
 # Learning rate for actor-critic models
-critic_lr = 0.002
-actor_lr = 0.001
+critic_lr = 0.001
+actor_lr = 0.001    
 
 critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
 actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
@@ -212,10 +212,10 @@ actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
 total_episodes = 100
 # Discount factor for future rewards
 gamma = 0.99
-# Used to update target networks
-tau = 0.005
+# Used to update target networks                
+tau = 0.001
 
-buffer = Buffer(50000, 64)
+buffer = Buffer(30000, 40)
 
 
 

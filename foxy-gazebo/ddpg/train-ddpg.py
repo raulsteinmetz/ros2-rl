@@ -62,7 +62,7 @@ class RobotControllerNode(Node):
     def scan_callback(self, msg):
         self.scan_data = msg
 
-    def get_state(self):
+    def get_state(self, linear_vel, angular_vel):
         self.scan_data = None
         self.odom_data = None
         rclpy.spin_once(self, timeout_sec=0.5)
@@ -101,18 +101,18 @@ class RobotControllerNode(Node):
         # Lidar readings
         lidar_readings = self.scan_data.ranges
 
-        # Discretize the lidar readings to only 24
-        num_samples = 24
+        # Discretize the lidar readings to only 10
+        num_samples = 10
         step = (len(lidar_readings) - 1) // (num_samples - 1)
-        lidar_24 = [lidar_readings[i * step] for i in range(num_samples)]
+        lidar_10 = [lidar_readings[i * step] for i in range(num_samples)]
 
-        # Replace 'inf' with '2'
-        lidar_24 = [x if x != float('inf') else 2 for x in lidar_24]
+        # Replace 'inf' with '3.5'
+        lidar_10 = [x if x != float('inf') else 3 for x in lidar_10]
 
         # Construct the state array
-        state = lidar_24 + [distance_to_target, angle_to_target]
+        state = lidar_10 + [distance_to_target, angle_to_target] + [linear_vel, angular_vel]
 
-        return state, turtle_x, turtle_y, target_x, target_y, lidar_24
+        return state, turtle_x, turtle_y, target_x, target_y, lidar_10
 
 
 
@@ -179,13 +179,13 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         # Learning rate for actor-critic models
-        critic_lr = 0.002
+        critic_lr = 0.001
         actor_lr = 0.001
 
         # Discount factor for future rewards
         gamma = 0.99
         # Used to update target networks
-        tau = 0.005
+        tau = 0.001
 
         agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
 
@@ -335,7 +335,7 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to spawn entity.")
 
-        sleep(1) # waiting for it to spawn
+        sleep(0.1) # waiting for it to spawn
 
 
     def despawn_target_sphere(self):
@@ -356,7 +356,7 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to delete entity.")
 
-        sleep(1)
+        #sleep(1)
 
 
 def main(args=None):

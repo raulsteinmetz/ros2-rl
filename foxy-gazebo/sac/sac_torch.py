@@ -7,8 +7,8 @@ from networks import ActorNetwork, CriticNetwork, ValueNetwork
 
 class Agent():
     def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[8],
-            action_space_high=2, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
-            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=2):
+            action_space_high=2, gamma=0.99, n_actions=2, max_size=30000, tau=0.001,
+            layer1_size=256, layer2_size=256, batch_size=40, reward_scale=1):
         self.gamma = gamma
         self.tau = tau
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
