@@ -145,7 +145,7 @@ class RobotControllerNode(Node):
             rclpy.spin_once(self, timeout_sec=0.5)
             sleep(0.1)
 
-        state, _, _, _, _, _ = self.get_state()
+        state, _, _, _, _, _ = self.get_state(cmd_vel_msg.linear.x, cmd_vel_msg.angular.z)
 
         return state
         
@@ -164,7 +164,7 @@ class RobotControllerNode(Node):
         elif np.min(lidar_32) < 0.19:
             print('Episode ended with collision')
             done = True
-            reward = -100
+            reward = -10
 
         return reward, done
 
@@ -172,7 +172,7 @@ class RobotControllerNode(Node):
 
 
     def rl_control_loop(self):
-        num_states = 26
+        num_states = 14
         num_actions = 2
 
         upper_bound = .25
@@ -217,9 +217,6 @@ class RobotControllerNode(Node):
 
                 tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
 
-                system('clear')
-                print('distance: ', state[24])
-                print('angle: ', state[25])
 
                 action = agent.policy(tf_prev_state)[0]
 
@@ -235,7 +232,7 @@ class RobotControllerNode(Node):
 
                 rclpy.spin_once(self, timeout_sec=0.5)
 
-                state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state()
+                state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state(0, 0)
 
                 # pause again
                 self.call_service_sync(self.pause_simulation_client, Empty.Request())
