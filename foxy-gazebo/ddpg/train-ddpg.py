@@ -33,8 +33,8 @@ class RobotControllerNode(Node):
         self.scan_subscription = self.create_subscription(LaserScan, '/scan', self.scan_callback, 1)
 
         # Clients to pause and unpause the Gazebo simulation
-        self.pause_simulation_client = self.create_client(Empty, '/pause_physics')
-        self.unpause_simulation_client = self.create_client(Empty, '/unpause_physics')
+        # self.pause_simulation_client = self.create_client(Empty, '/pause_physics')
+        # self.unpause_simulation_client = self.create_client(Empty, '/unpause_physics')
         
         # Client to spawn entities in Gazebo
         self.spawn_entity_client = self.create_client(SpawnEntity, '/spawn_entity')
@@ -135,7 +135,7 @@ class RobotControllerNode(Node):
         self.cmd_vel_publisher.publish(cmd_vel_msg)
 
         # unpause
-        self.call_service_sync(self.unpause_simulation_client, Empty.Request())
+        # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
         # give it some spins to update the lidar and not bug detect collision
         self.scan_data = None
@@ -188,9 +188,10 @@ class RobotControllerNode(Node):
         tau = 0.001
 
         agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
+        agent.load_models()
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 250  # for example
+        max_steps_per_episode = 500  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
@@ -213,7 +214,7 @@ class RobotControllerNode(Node):
                 # pause sim
                 rclpy.spin_once(self, timeout_sec=0.5)
 
-                self.call_service_sync(self.pause_simulation_client, Empty.Request())
+                # self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
 
@@ -226,7 +227,7 @@ class RobotControllerNode(Node):
                 self.cmd_vel_publisher.publish(cmd_vel_msg)
                 rclpy.spin_once(self, timeout_sec=0.5)
 
-                self.call_service_sync(self.unpause_simulation_client, Empty.Request())
+                # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
                 sleep(0.001)
 
@@ -235,7 +236,7 @@ class RobotControllerNode(Node):
                 state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state(0, 0)
 
                 # pause again
-                self.call_service_sync(self.pause_simulation_client, Empty.Request())
+                # self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 # reward
                 reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32)
@@ -266,13 +267,14 @@ class RobotControllerNode(Node):
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
 
-            # Plot raw rewards and moving average
-            plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
-            plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
-            plt.xlabel("Episode")
-            plt.ylabel("Acumulated Reward")
-            plt.legend()  # Add legend to the plot
-            plt.savefig('acum_rwds.png')
+            if episode % 50 == 0:
+                # Plot raw rewards and moving average
+                plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
+                plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
+                plt.xlabel("Episode")
+                plt.ylabel("Acumulated Reward")
+                plt.legend()  # Add legend to the plot
+                plt.savefig('acum_rwds.png')
 
 
 
