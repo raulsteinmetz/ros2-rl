@@ -229,7 +229,7 @@ class RobotControllerNode(Node):
 
                 # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
-                sleep(0.001)
+                # sleep(0.001)
 
                 rclpy.spin_once(self, timeout_sec=0.5)
 
@@ -325,6 +325,7 @@ class RobotControllerNode(Node):
         request.name = 'target_sphere'  # Unique name for the new model
         request.xml = sphere_sdf  # Model XML with the random position
 
+        sleep(.5)
         # Call the service
         future = self.spawn_entity_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
