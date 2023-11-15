@@ -200,6 +200,17 @@ class RobotControllerNode(Node):
             print('Episode: ', episode)
 
             while rclpy.ok() and not done and step < max_steps_per_episode:
+
+                # print state
+                # state = lidar_10 + [distance_to_target, angle_to_target] + [linear_vel, angular_vel]
+                # system('clear')
+                # print('\n\n--- STATE ---')
+                # print(f'lidar 10 -> {state[:10]}')
+                # print(f'distance to target -> {state[10]}')
+                # print(f'angle to target {state[11]}')
+                # print(f'linear vel -> {state[12]}')
+                # print(f'angular vel -> {state[13]}')
+
                 # pause sim
                 rclpy.spin_once(self, timeout_sec=0.5)
 
@@ -215,7 +226,7 @@ class RobotControllerNode(Node):
 
                 # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
-                sleep(0.001)
+                #sleep(0.001)
 
                 rclpy.spin_once(self, timeout_sec=0.5)
 
@@ -278,7 +289,6 @@ class RobotControllerNode(Node):
 
 
     def spawn_target_in_environment(self):
-        print('SASQUE')
         # Check if spawn_entity service is available
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
@@ -287,6 +297,7 @@ class RobotControllerNode(Node):
         # Note: You should adjust the range to fit the environment of your simulation
         self.target_x = random.uniform(-2, 2)  # For example, within [-5.0, 5.0] range
         self.target_y = random.uniform(-2, 2)
+
         fixed_z = 0.1  # Fixed z coordinate
 
         # Dynamic SDF with the random position
@@ -311,9 +322,12 @@ class RobotControllerNode(Node):
         </sdf>
         """
 
+    
+
         request = SpawnEntity.Request()
         request.name = 'target_sphere'  # Unique name for the new model
         request.xml = sphere_sdf  # Model XML with the random position
+
 
         # Call the service
         future = self.spawn_entity_client.call_async(request)
@@ -325,8 +339,12 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to spawn entity.")
 
+        sleep(.5)
 
-        sleep(0.1)
+        future = self.spawn_entity_client.call_async(request)
+
+        rclpy.spin_until_future_complete(self, future)  # Wait for the response
+
 
 
 
