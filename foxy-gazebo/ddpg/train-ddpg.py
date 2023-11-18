@@ -285,7 +285,7 @@ class RobotControllerNode(Node):
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
-        # dynamic SDF for a target
+        # dynamic SDF for a purely visual target
         target_sdf = f"""
         <?xml version='1.0'?>
         <sdf version='1.6'>
@@ -307,6 +307,11 @@ class RobotControllerNode(Node):
                 </script>
                 </material>
             </visual>
+            <collision name='collision'>
+                <geometry>
+                <box><size>0 0 0</size></box>
+                </geometry>
+            </collision>
             </link>
         </model>
         </sdf>
