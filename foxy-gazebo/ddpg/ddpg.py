@@ -7,15 +7,12 @@ import matplotlib.pyplot as plt
 
 problem = "Pendulum-v1"
 env = gym.make(problem)
-
 num_states = env.observation_space.shape[0]
 print("Size of State Space ->  {}".format(num_states))
 num_actions = env.action_space.shape[0]
 print("Size of Action Space ->  {}".format(num_actions))
-
 upper_bound = env.action_space.high[0]
 lower_bound = env.action_space.low[0]
-
 print("Max Value of Action ->  {}".format(upper_bound))
 print("Min Value of Action ->  {}".format(lower_bound))
 
@@ -49,7 +46,7 @@ class OUActionNoise:
 
 
 class Buffer:
-    def __init__(self, buffer_capacity=30000, batch_size=40):
+    def __init__(self, buffer_capacity=30000, batch_size=14):
         # Number of "experiences" to store at max
         self.buffer_capacity = buffer_capacity
         # Num of tuples to train on.
@@ -175,7 +172,6 @@ def get_critic():
     return model
 
 
-
 def policy(state, noise_object):
     sampled_actions = tf.squeeze(actor_model(state))
     noise = noise_object()
@@ -186,7 +182,6 @@ def policy(state, noise_object):
     legal_action = np.clip(sampled_actions, lower_bound, upper_bound)
 
     return [np.squeeze(legal_action)]
-
 
 
 std_dev = 0.2
@@ -216,8 +211,6 @@ gamma = 0.99
 tau = 0.001
 
 buffer = Buffer(30000, 40)
-
-
 
 # To store reward history of each episode
 ep_reward_list = []

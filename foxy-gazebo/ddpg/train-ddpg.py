@@ -49,7 +49,7 @@ class RobotControllerNode(Node):
         self.odom_data = None
         self.scan_data = None
 
-        # target
+        # targethttps://gazebosim.org/docs/harmonic/comparison
         self.target_y = 0
         self.target_x = 0
 
@@ -114,8 +114,6 @@ class RobotControllerNode(Node):
 
         return state, turtle_x, turtle_y, target_x, target_y, lidar_10
 
-
-
     def reset_simulation(self):
         """Resets the simulation to start a new episode."""
     
@@ -125,7 +123,10 @@ class RobotControllerNode(Node):
             self.get_logger().warn('Reset service not available, waiting again...')
         self.reset_client.call_async(req)
         
-        self.despawn_target_sphere()
+        self.despawn_target_visual()
+
+        self.target_x = random.uniform(-1, 2)
+        self.target_y = random.uniform(-1, 2)
 
         self.spawn_target_in_environment()
         
@@ -133,9 +134,6 @@ class RobotControllerNode(Node):
         cmd_vel_msg.linear.x = 0.0
         cmd_vel_msg.angular.z = 0.0
         self.cmd_vel_publisher.publish(cmd_vel_msg)
-
-        # unpause
-        # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
         # give it some spins to update the lidar and not bug detect collision
         self.scan_data = None
@@ -149,7 +147,6 @@ class RobotControllerNode(Node):
 
         return state
         
-
     def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32):
         reward = 0
         done = False
@@ -167,9 +164,6 @@ class RobotControllerNode(Node):
             reward = -10
 
         return reward, done
-
-        
-
 
     def rl_control_loop(self):
         num_states = 14
@@ -261,6 +255,7 @@ class RobotControllerNode(Node):
             else:
                 mov_avg_rwds.append(np.mean(acum_rwds[:episode+1]))
 
+            print(f'valor de N: {N}')
             if episode >= N-1:
                 if mov_avg_rwds[-1] > best_moving_average:
                     best_moving_average = mov_avg_rwds[-1]
@@ -268,15 +263,13 @@ class RobotControllerNode(Node):
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
 
             if episode % 50 == 0:
-                # Plot raw rewards and moving average
+            # Plot raw rewards and moving average
                 plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
                 plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
                 plt.xlabel("Episode")
                 plt.ylabel("Acumulated Reward")
                 plt.legend()  # Add legend to the plot
                 plt.savefig('acum_rwds.png')
-
-
 
     def call_service_sync(self, client, request):
         # Synchronous service call
@@ -287,77 +280,71 @@ class RobotControllerNode(Node):
         rclpy.spin_until_future_complete(self, future)
         return future.result()
 
-
     def spawn_target_in_environment(self):
-        # Check if spawn_entity service is available
+        # Verify if the spawn service is available
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
-        # Generate random coordinates within a specific range for the sphere's position
-        # Note: You should adjust the range to fit the environment of your simulation
-        self.target_x = random.uniform(-1, 2)  # For example, within [-5.0, 5.0] range
-        self.target_y = random.uniform(-1, 2)
-        fixed_z = 0.1  # Fixed z coordinate
-
-        # Dynamic SDF with the random position
-        sphere_sdf = f"""
+        # dynamic SDF for a target
+        target_sdf = f"""
         <?xml version='1.0'?>
         <sdf version='1.6'>
-          <model name='target_model'>
-            <pose>{self.target_x} {self.target_y} {fixed_z} 0 0 0</pose>
+        <model name='visual_target'>
+            <static>true</static>
+            <pose>{self.target_x} {self.target_y} 0.01 0 0 0</pose>
             <link name='link'>
-              <collision name='collision'>
+            <visual name='visual'>
                 <geometry>
-                  <sphere><radius>0.1</radius></sphere>
+                <plane>
+                    <normal>0 0 1</normal>
+                    <size>0.2 0.2</size>
+                </plane>
                 </geometry>
-              </collision>
-              <visual name='visual'>
-                <geometry>
-                  <sphere><radius>0.1</radius></sphere>
-                </geometry>
-              </visual>
+                <material>
+                <script>
+                    <uri>file://media/materials/scripts/gazebo.material</uri>
+                    <name>Gazebo/Red</name>
+                </script>
+                </material>
+            </visual>
             </link>
-          </model>
+        </model>
         </sdf>
         """
 
         request = SpawnEntity.Request()
-        request.name = 'target_sphere'  # Unique name for the new model
-        request.xml = sphere_sdf  # Model XML with the random position
+        request.name = 'target_visual'
+        request.xml = target_sdf
 
         sleep(.5)
-        # Call the service
         future = self.spawn_entity_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)  # Wait for the response
+        rclpy.spin_until_future_complete(self, future)
 
         if future.result() is not None:
-            self.get_logger().info(f"Entity spawned successfully at coordinates: x={self.target_x}, y={self.target_y}, z={fixed_z}.")
+            self.get_logger().info(f"Marcação visual criada com sucesso nas coordenadas: x={self.target_x}, y={self.target_y}, z=0.01.")
         else:
-            self.get_logger().error("Failed to spawn entity.")
+            self.get_logger().error("Falha ao criar a marcação visual.")
 
-        sleep(0.1) # waiting for it to spawn
+        sleep(0.1)
 
-
-    def despawn_target_sphere(self):
-        # Check if delete_entity service is available
+    def despawn_target_visual(self):
         while not self.delete_entity_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('DeleteEntity service not available, waiting again...')
-
-        # Request to delete the target sphere
+            self.get_logger().info('service not available, waiting again...')
+        
+        # Requesting to delete current visual target
         request = DeleteEntity.Request()
-        request.name = 'target_sphere'  # Name of the sphere entity to be deleted
+        request.name = 'target_visual'
 
-        # Call the service
+        # calling the service
         future = self.delete_entity_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)  # Wait for the response
+        rclpy.spin_until_future_complete(self, future)
 
-        if future.result() is not None and future.result().success:
-            self.get_logger().info("Entity deleted successfully.")
+        if future.result() is not None:
+            self.get_logger().info("Alvo visual deletado com sucesso.")
         else:
-            self.get_logger().error("Failed to delete entity.")
-
-        #sleep(1)
-
+            self.get_logger().error("Falha ao deletar o alvo visual.")
+        
+        sleep(0.1)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -367,6 +354,7 @@ def main(args=None):
 
     robot_controller_node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

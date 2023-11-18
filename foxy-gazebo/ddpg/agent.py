@@ -20,6 +20,7 @@ def get_actor(state_space, action_high, action_space):
     model = tf.keras.Model(inputs, outputs)
     return model
 
+
 def get_critic(state_space, action_space):
     # State as input
     state_input = keras.layers.Input(shape=(state_space))
@@ -42,9 +43,12 @@ def get_critic(state_space, action_space):
 
     return model
 
+
 class Agent:
     def __init__(self, state_space, action_space, action_high,
                  action_low, gamma, tau, critic_lr, actor_lr, noise_std):
+        print(f'state_space: {state_space}')
+        print(f'action_space: {action_space}')
         self.mem = Buffer(state_space, action_space, 10000, 64)
         self.actor = get_actor(state_space, action_high, action_space)
         self.critic = get_critic(state_space, action_space)
@@ -69,7 +73,6 @@ class Agent:
 
         self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(noise_std) * np.ones(1))
     
-
     # Eager execution is turned on by default in TensorFlow 2. Decorating with tf.function allows
     # TensorFlow to build a static graph out of the logic and computations in our function.
     # This provides a large speed up for blocks of code that contain many small TensorFlow operations such as this one.
@@ -141,7 +144,10 @@ class Agent:
 
         for (a, b) in zip(self.target_critic.variables, self.critic.variables):
             a.assign(b * self.tau + a * (1 - self.tau))
-
+    
+    def try_load_model_weights(self, model, file_path):
+        if os.path.exists(file_path):
+            model.load_weights(file_path)
 
     def save_models(self, directory="./models"):
         """Saves the target actor and critic models."""
@@ -152,5 +158,5 @@ class Agent:
 
     def load_models(self, directory="./models"):
         """Loads the target actor and critic models."""
-        self.target_actor.load_weights(os.path.join(directory, "target_actor.h5"))
-        self.target_critic.load_weights(os.path.join(directory, "target_critic.h5"))
+        self.try_load_model_weights(self.target_actor, os.path.join(directory, "target_actor.h5"))
+        self.try_load_model_weights(self.target_critic, os.path.join(directory, "target_critic.h5"))
