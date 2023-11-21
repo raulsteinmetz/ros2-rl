@@ -179,7 +179,7 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         agent = Agent(input_dims=[num_states], action_space_high=upper_bound, n_actions=num_actions)
-        agent.load_models()
+        # agent.load_models()
 
         max_episodes = 5000  # for example
         max_steps_per_episode = 400  # for example
