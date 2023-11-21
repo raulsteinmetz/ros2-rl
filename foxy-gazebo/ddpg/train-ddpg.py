@@ -124,8 +124,8 @@ class RobotControllerNode(Node):
         
         self.despawn_target_visual()
 
-        self.target_x = random.uniform(-1, 2)
-        self.target_y = random.uniform(-1, 2)
+        self.target_x = random.uniform(-2, 2)
+        self.target_y = random.uniform(-2, 2)
 
         self.spawn_target_in_environment()
         
