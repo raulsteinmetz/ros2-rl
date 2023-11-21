@@ -140,7 +140,6 @@ class RobotControllerNode(Node):
     
         while self.scan_data is None or self.odom_data is None:
             rclpy.spin_once(self, timeout_sec=0.5)
-            sleep(0.1)
 
         state, _, _, _, _, _ = self.get_state(cmd_vel_msg.linear.x, cmd_vel_msg.angular.z)
 
@@ -327,8 +326,6 @@ class RobotControllerNode(Node):
             self.get_logger().info(f"Visual target create successfully on coordinates: x={self.target_x}, y={self.target_y}, z=0.01.")
         else:
             self.get_logger().error("Failed to create visual target..")
-
-        sleep(0.1)
 
     def despawn_target_visual(self):
         while not self.delete_entity_client.wait_for_service(timeout_sec=1.0):
