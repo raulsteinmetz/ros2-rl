@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Buffer:
     def __init__(self, state_space, action_space, buffer_capacity=100000, batch_size=64):
         # Number of "experiences" to store at max
