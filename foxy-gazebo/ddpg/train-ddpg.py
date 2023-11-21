@@ -22,7 +22,6 @@ from time import sleep
 from os import system
 
 
-
 class RobotControllerNode(Node):
     def __init__(self):
         super().__init__("robot_controller_node")
@@ -349,6 +348,7 @@ class RobotControllerNode(Node):
             self.get_logger().error("Failed to create visual target.")
         
         sleep(0.1)
+
 
 def main(args=None):
     rclpy.init(args=args)
