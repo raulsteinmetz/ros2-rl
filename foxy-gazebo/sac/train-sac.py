@@ -123,7 +123,7 @@ class RobotControllerNode(Node):
             self.get_logger().warn('Reset service not available, waiting again...')
         self.reset_client.call_async(req)
         
-        self.despawn_target_sphere()
+        self.despawn_target_mark()
 
         self.spawn_target_in_environment()
         
@@ -177,10 +177,10 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         agent = Agent(input_dims=[num_states], action_space_high=upper_bound, n_actions=num_actions)
-        agent.load_models()
+        #agent.load_models()
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 500  # for example
+        max_steps_per_episode = 200  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
@@ -201,17 +201,6 @@ class RobotControllerNode(Node):
 
             while rclpy.ok() and not done and step < max_steps_per_episode:
 
-                # print state
-                # state = lidar_10 + [distance_to_target, angle_to_target] + [linear_vel, angular_vel]
-                # system('clear')
-                # print('\n\n--- STATE ---')
-                # print(f'lidar 10 -> {state[:10]}')
-                # print(f'distance to target -> {state[10]}')
-                # print(f'angle to target {state[11]}')
-                # print(f'linear vel -> {state[12]}')
-                # print(f'angular vel -> {state[13]}')
-
-                # pause sim
                 rclpy.spin_once(self, timeout_sec=0.5)
 
                 # self.call_service_sync(self.pause_simulation_client, Empty.Request())
@@ -293,43 +282,38 @@ class RobotControllerNode(Node):
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
-        # Generate random coordinates within a specific range for the sphere's position
-        # Note: You should adjust the range to fit the environment of your simulation
-        self.target_x = random.uniform(-2, 2)  # For example, within [-5.0, 5.0] range
-        self.target_y = random.uniform(-2, 2)
+        # Generate random coordinates within a specific range for the mark's position
+        self.target_x = random.uniform(-1.75, 1.75)  # Adjust the range to fit your environment
+        self.target_y = random.uniform(-1.75, 1.75)
+        fixed_z = 0.01  # Fixed z coordinate, just above ground level
 
-        fixed_z = 0.1  # Fixed z coordinate
 
-        # Dynamic SDF with the random position
-        sphere_sdf = f"""
+        # Dynamic SDF for a flat plane as a mark on the ground, set as static
+        mark_sdf = f"""
         <?xml version='1.0'?>
         <sdf version='1.6'>
-          <model name='target_model'>
+        <model name='target_mark'>
+            <static>true</static>  <!-- This makes the model static -->
             <pose>{self.target_x} {self.target_y} {fixed_z} 0 0 0</pose>
             <link name='link'>
-              <collision name='collision'>
+            <visual name='visual'>
                 <geometry>
-                  <sphere><radius>0.1</radius></sphere>
+                <plane><normal>0 0 1</normal><size>0.5 0.5</size></plane>  <!-- Smaller size -->
                 </geometry>
-              </collision>
-              <visual name='visual'>
-                <geometry>
-                  <sphere><radius>0.1</radius></sphere>
-                </geometry>
-              </visual>
+                <material>
+                <ambient>1 0 0 1</ambient>  <!-- Bright red color for visibility -->
+                </material>
+            </visual>
             </link>
-          </model>
+        </model>
         </sdf>
         """
 
-    
-
         request = SpawnEntity.Request()
-        request.name = 'target_sphere'  # Unique name for the new model
-        request.xml = sphere_sdf  # Model XML with the random position
+        request.name = 'target_mark'  # Unique name for the new model
+        request.xml = mark_sdf  # Model XML with the random position
 
-
-        # Call the service
+       # Call the service
         future = self.spawn_entity_client.call_async(request)
 
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
@@ -338,35 +322,34 @@ class RobotControllerNode(Node):
             self.get_logger().info(f"Entity spawned successfully at coordinates: x={self.target_x}, y={self.target_y}, z={fixed_z}.")
         else:
             self.get_logger().error("Failed to spawn entity.")
-
+            
         sleep(.5)
 
         future = self.spawn_entity_client.call_async(request)
 
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
 
-
-
-
-    def despawn_target_sphere(self):
+    def despawn_target_mark(self):
         # Check if delete_entity service is available
         while not self.delete_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('DeleteEntity service not available, waiting again...')
 
-        # Request to delete the target sphere
+        # Request to delete the target mark
         request = DeleteEntity.Request()
-        request.name = 'target_sphere'  # Name of the sphere entity to be deleted
+        request.name = 'target_mark'  # Name of the mark entity to be deleted
 
         # Call the service
         future = self.delete_entity_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)  # Wait for the response
 
+        # Handle the deletion result
         if future.result() is not None and future.result().success:
-            self.get_logger().info("Entity deleted successfully.")
+            self.get_logger().info("Mark deleted successfully.")
         else:
-            self.get_logger().error("Failed to delete entity.")
+            self.get_logger().error("Failed to delete mark.")
 
         # sleep(1)
+
 
 
 def main(args=None):
