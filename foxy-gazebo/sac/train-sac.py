@@ -155,6 +155,8 @@ class RobotControllerNode(Node):
         # distance to target
         distance = np.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2) 
 
+        # reward -= distance * 0.05
+
         if distance < 0.3:
             print('Episode ended with target reached')
             done = True
@@ -177,10 +179,10 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         agent = Agent(input_dims=[num_states], action_space_high=upper_bound, n_actions=num_actions)
-        #agent.load_models()
+        agent.load_models()
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 200  # for example
+        max_steps_per_episode = 400  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
