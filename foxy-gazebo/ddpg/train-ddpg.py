@@ -49,7 +49,7 @@ class RobotControllerNode(Node):
         self.odom_data = None
         self.scan_data = None
 
-        # target
+        # targethttps://gazebosim.org/docs/harmonic/comparison
         self.target_y = 0
         self.target_x = 0
 
@@ -114,8 +114,6 @@ class RobotControllerNode(Node):
 
         return state, turtle_x, turtle_y, target_x, target_y, lidar_10
 
-
-
     def reset_simulation(self):
         """Resets the simulation to start a new episode."""
     
@@ -125,7 +123,10 @@ class RobotControllerNode(Node):
             self.get_logger().warn('Reset service not available, waiting again...')
         self.reset_client.call_async(req)
         
-        self.despawn_target_mark()
+        self.despawn_target_visual()
+
+        self.target_x = random.uniform(-1, 2)
+        self.target_y = random.uniform(-1, 2)
 
         self.spawn_target_in_environment()
         
@@ -133,9 +134,6 @@ class RobotControllerNode(Node):
         cmd_vel_msg.linear.x = 0.0
         cmd_vel_msg.angular.z = 0.0
         self.cmd_vel_publisher.publish(cmd_vel_msg)
-
-        # unpause
-        # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
         # give it some spins to update the lidar and not bug detect collision
         self.scan_data = None
@@ -145,11 +143,10 @@ class RobotControllerNode(Node):
             rclpy.spin_once(self, timeout_sec=0.5)
             sleep(0.1)
 
-        state, _, _, _, _, _ = self.get_state(0, 0)
+        state, _, _, _, _, _ = self.get_state(cmd_vel_msg.linear.x, cmd_vel_msg.angular.z)
 
         return state
         
-
     def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32):
         reward = 0
         done = False
@@ -168,7 +165,6 @@ class RobotControllerNode(Node):
 
         return reward, done
 
-
     def rl_control_loop(self):
         num_states = 14
         num_actions = 2
@@ -177,20 +173,19 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         # Learning rate for actor-critic models
-        critic_lr = 0.001
-        actor_lr = 0.001
+        critic_lr = 0.0001
+        actor_lr = 0.0005
 
         # Discount factor for future rewards
-        gamma = 0.99
+        gamma = 0.995
         # Used to update target networks
-        tau = 0.001
+        tau = 0.01
 
         agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
-
-        # agent.load_models()
+        agent.load_models()
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 200  # for example
+        max_steps_per_episode = 500  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
@@ -210,12 +205,13 @@ class RobotControllerNode(Node):
             print('Episode: ', episode)
 
             while rclpy.ok() and not done and step < max_steps_per_episode:
-
+                # pause sim
                 rclpy.spin_once(self, timeout_sec=0.5)
 
                 # self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
+
 
                 action = agent.policy(tf_prev_state)[0]
 
@@ -265,19 +261,14 @@ class RobotControllerNode(Node):
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
 
-
-            if episode == 1:
-                agent.save_models()
-
             if episode % 50 == 0:
-                # Plot raw rewards and moving average
+            # Plot raw rewards and moving average
                 plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
                 plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
                 plt.xlabel("Episode")
                 plt.ylabel("Acumulated Reward")
                 plt.legend()  # Add legend to the plot
                 plt.savefig('acum_rwds.png')
-
 
     def call_service_sync(self, client, request):
         # Synchronous service call
@@ -289,78 +280,75 @@ class RobotControllerNode(Node):
         return future.result()
 
     def spawn_target_in_environment(self):
-        # Check if spawn_entity service is available
+        # Verify if the spawn service is available
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
-        # Generate random coordinates within a specific range for the mark's position
-        self.target_x = random.uniform(-1.75, 1.75)  # Adjust the range to fit your environment
-        self.target_y = random.uniform(-1.75, 1.75)
-        fixed_z = 0.01  # Fixed z coordinate, just above ground level
-
-
-        # Dynamic SDF for a flat plane as a mark on the ground, set as static
-        mark_sdf = f"""
+        # dynamic SDF for a purely visual target
+        target_sdf = f"""
         <?xml version='1.0'?>
         <sdf version='1.6'>
-        <model name='target_mark'>
-            <static>true</static>  <!-- This makes the model static -->
-            <pose>{self.target_x} {self.target_y} {fixed_z} 0 0 0</pose>
+        <model name='visual_target'>
+            <static>true</static>
+            <pose>{self.target_x} {self.target_y} 0.01 0 0 0</pose>
             <link name='link'>
             <visual name='visual'>
                 <geometry>
-                <plane><normal>0 0 1</normal><size>0.5 0.5</size></plane>  <!-- Smaller size -->
+                <plane>
+                    <normal>0 0 1</normal>
+                    <size>0.2 0.2</size>
+                </plane>
                 </geometry>
                 <material>
-                <ambient>1 0 0 1</ambient>  <!-- Bright red color for visibility -->
+                <script>
+                    <uri>file://media/materials/scripts/gazebo.material</uri>
+                    <name>Gazebo/Red</name>
+                </script>
                 </material>
             </visual>
+            <collision name='collision'>
+                <geometry>
+                <box><size>0 0 0</size></box>
+                </geometry>
+            </collision>
             </link>
         </model>
         </sdf>
         """
 
         request = SpawnEntity.Request()
-        request.name = 'target_mark'  # Unique name for the new model
-        request.xml = mark_sdf  # Model XML with the random position
+        request.name = 'target_visual'
+        request.xml = target_sdf
 
-       # Call the service
+        sleep(.5)
         future = self.spawn_entity_client.call_async(request)
-
-        rclpy.spin_until_future_complete(self, future)  # Wait for the response
+        rclpy.spin_until_future_complete(self, future)
 
         if future.result() is not None:
-            self.get_logger().info(f"Entity spawned successfully at coordinates: x={self.target_x}, y={self.target_y}, z={fixed_z}.")
+            self.get_logger().info(f"Visual target create successfully on coordinates: x={self.target_x}, y={self.target_y}, z=0.01.")
         else:
-            self.get_logger().error("Failed to spawn entity.")
-            
-        sleep(.5)
+            self.get_logger().error("Failed to create visual target..")
 
-        future = self.spawn_entity_client.call_async(request)
+        sleep(0.1)
 
-        rclpy.spin_until_future_complete(self, future)  # Wait for the response
-
-    def despawn_target_mark(self):
-        # Check if delete_entity service is available
+    def despawn_target_visual(self):
         while not self.delete_entity_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('DeleteEntity service not available, waiting again...')
-
-        # Request to delete the target mark
+            self.get_logger().info('Service not available, waiting again...')
+        
+        # Requesting to delete current visual target
         request = DeleteEntity.Request()
-        request.name = 'target_mark'  # Name of the mark entity to be deleted
+        request.name = 'target_visual'
 
-        # Call the service
+        # calling the service
         future = self.delete_entity_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)  # Wait for the response
+        rclpy.spin_until_future_complete(self, future)
 
-        # Handle the deletion result
-        if future.result() is not None and future.result().success:
-            self.get_logger().info("Mark deleted successfully.")
+        if future.result() is not None:
+            self.get_logger().info("Visual target created.")
         else:
-            self.get_logger().error("Failed to delete mark.")
-
-        # sleep(1)
-
+            self.get_logger().error("Failed to create visual target.")
+        
+        sleep(0.1)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -370,6 +358,7 @@ def main(args=None):
 
     robot_controller_node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
