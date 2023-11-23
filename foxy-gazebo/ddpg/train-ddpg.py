@@ -200,9 +200,6 @@ class RobotControllerNode(Node):
             step = 0
             done = False
 
-            with self.tensorboard_writer.as_default():
-                tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
-
             state = self.reset_simulation()
             acum_reward = 0
 
@@ -246,6 +243,8 @@ class RobotControllerNode(Node):
                 agent.learn()
                 agent.update_target()
 
+                with self.tensorboard_writer.as_default():
+                    tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
 
                 step += 1
 
