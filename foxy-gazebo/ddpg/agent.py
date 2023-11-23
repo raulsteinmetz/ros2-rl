@@ -11,9 +11,11 @@ def get_actor(state_space, action_high, action_space):
     last_init = tf.random_uniform_initializer(minval=-0.003, maxval=0.003)
 
     inputs = keras.layers.Input(shape=(state_space,))
-    out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs)
+    # out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs)
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs) # test for environment 1
     out = keras.layers.Dropout(0.1)(out) # Dropout
-    out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
+    # out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out) # test for environment 1
     out = keras.layers.Dropout(0.1)(out) # Dropout
 
     # bellow i chaged 1 for action_space!!!!
@@ -62,8 +64,10 @@ class Agent:
         self.target_actor = get_actor(state_space, action_high, action_space)
         self.target_critic = get_critic(state_space, action_space)
 
-        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
+        # self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+        # self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr * 0.1) # test for environment 1
+        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr * 0.1) # test for environment 1
 
         self.action_high = action_high
         self.action_low = action_low
@@ -77,7 +81,8 @@ class Agent:
         self.target_actor.set_weights(self.actor.get_weights())
         self.target_critic.set_weights(self.critic.get_weights())
 
-        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.1) * np.ones(1), theta=0.1)
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.05) * np.ones(1), theta=0.05) # test for environment 1
+        # self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.1) * np.ones(1), theta=0.1) # test for environment 2
     
     # Eager execution is turned on by default in TensorFlow 2. Decorating with tf.function allows
     # TensorFlow to build a static graph out of the logic and computations in our function.
