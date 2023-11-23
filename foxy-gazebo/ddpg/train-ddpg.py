@@ -1,4 +1,6 @@
 # env imports
+import os
+import random
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Empty  # Service for pausing and unpausing the simulation4
@@ -7,7 +9,6 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
-import random
 
 # neural network imports
 import tensorflow as tf
@@ -20,6 +21,7 @@ from agent import Agent
 from util import *
 from time import sleep
 from os import system
+from datetime import datetime
 
 
 class RobotControllerNode(Node):
@@ -30,6 +32,8 @@ class RobotControllerNode(Node):
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 1) # might have to ajust the buffers, do not know their influence just yet
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 1)
         self.scan_subscription = self.create_subscription(LaserScan, '/scan', self.scan_callback, 1)
+        log_dir = os.path.join("logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
+        self.tensorboard_writer = tf.summary.create_file_writer(log_dir)
 
         # Clients to pause and unpause the Gazebo simulation
         # self.pause_simulation_client = self.create_client(Empty, '/pause_physics')
@@ -183,7 +187,7 @@ class RobotControllerNode(Node):
         agent.load_models()
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 500  # for example
+        max_steps_per_episode = 200  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
@@ -196,6 +200,8 @@ class RobotControllerNode(Node):
             step = 0
             done = False
 
+            with self.tensorboard_writer.as_default():
+                tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
 
             state = self.reset_simulation()
             acum_reward = 0
