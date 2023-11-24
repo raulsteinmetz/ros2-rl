@@ -149,7 +149,7 @@ class RobotControllerNode(Node):
 
         return state
         
-    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32):
+    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps_per_episode, step):
         reward = 0
         done = False
 
@@ -164,6 +164,11 @@ class RobotControllerNode(Node):
             print('Episode ended with collision')
             done = True
             reward = -10
+        elif step == (max_steps_per_episode - 1):
+            print('Episode ended without reaching target')
+            done = True
+            reward = -10
+        print(f"max_step: {max_steps_per_episode}, step: {step}")
 
         return reward, done
 
@@ -234,7 +239,7 @@ class RobotControllerNode(Node):
                 # self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 # reward
-                reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32)
+                reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32, max_steps_per_episode, step)
 
                 agent.mem.record((state, action, reward, state_))
                 state = state_
@@ -242,9 +247,6 @@ class RobotControllerNode(Node):
 
                 agent.learn()
                 agent.update_target()
-
-                with self.tensorboard_writer.as_default():
-                    tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
 
                 step += 1
 
@@ -272,6 +274,9 @@ class RobotControllerNode(Node):
                 plt.ylabel("Acumulated Reward")
                 plt.legend()  # Add legend to the plot
                 plt.savefig('acum_rwds.png')
+                with self.tensorboard_writer.as_default():
+                    tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
+                    tf.summary.scalar('Acumulated Reward', mov_avg_rwds, step=episode)
 
     def call_service_sync(self, client, request):
         # Synchronous service call
