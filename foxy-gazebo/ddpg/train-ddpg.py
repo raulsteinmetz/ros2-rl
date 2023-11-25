@@ -14,7 +14,7 @@ from gazebo_msgs.srv import DeleteEntity
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from agent import Agent
 
 # other
@@ -267,15 +267,16 @@ class RobotControllerNode(Node):
 
             if episode % 50 == 0:
             # Plot raw rewards and moving average
-                plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
-                plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
-                plt.xlabel("Episode")
-                plt.ylabel("Acumulated Reward")
-                plt.legend()  # Add legend to the plot
-                plt.savefig('acum_rwds.png')
+                # plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
+                # plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
+                # plt.xlabel("Episode")
+                # plt.ylabel("Acumulated Reward")
+                # plt.legend()  # Add legend to the plot
+                # plt.savefig('acum_rwds.png')
                 with self.tensorboard_writer.as_default():
                     tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
                     tf.summary.scalar('Moving Average Rewards', mov_avg_rwds[-1], step=episode)
+        return
 
     def call_service_sync(self, client, request):
         # Synchronous service call
