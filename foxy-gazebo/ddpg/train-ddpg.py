@@ -168,7 +168,6 @@ class RobotControllerNode(Node):
             print('Episode ended without reaching target')
             done = True
             reward = -10
-        print(f"max_step: {max_steps_per_episode}, step: {step}")
 
         return reward, done
 
@@ -276,7 +275,7 @@ class RobotControllerNode(Node):
                 plt.savefig('acum_rwds.png')
                 with self.tensorboard_writer.as_default():
                     tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
-                    tf.summary.scalar('Acumulated Reward', mov_avg_rwds, step=episode)
+                    tf.summary.scalar('Moving Average Rewards', mov_avg_rwds[-1], step=episode)
 
     def call_service_sync(self, client, request):
         # Synchronous service call
