@@ -179,7 +179,7 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         agent = Agent(input_dims=[num_states], action_space_high=upper_bound, n_actions=num_actions)
-        agent.load_models()
+        # agent.load_models()
 
         max_episodes = 5000  # for example
         max_steps_per_episode = 150  # for example
@@ -287,21 +287,24 @@ class RobotControllerNode(Node):
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
-        # Generate random coordinates within a specific range for the mark's position
-        area = np.random.randint(0, 4)
+        # # Generate random coordinates within a specific range for the mark's position
+        # area = np.random.randint(0, 4)
 
-        if area == 0: 
-            self.target_x = random.uniform(-1.90, -1.60)  # Adjust the range to fit your environment
-            self.target_y = random.uniform(-1.90, -1.60) 
-        elif area == 1:
-            self.target_x = random.uniform(-1.90, -1.60)  # Adjust the range to fit your environment
-            self.target_y = random.uniform(1.60, 1.90) 
-        elif area == 2:
-            self.target_x = random.uniform(1.60, 1.90)  # Adjust the range to fit your environment
-            self.target_y = random.uniform(-1.90, -1.60)
-        elif area == 3:
-            self.target_x = random.uniform(1.60, 1.90)  # Adjust the range to fit your environment
-            self.target_y = random.uniform(1.60, 1.90)
+        # if area == 0: 
+        #     self.target_x = random.uniform(-1.90, -1.60)  # Adjust the range to fit your environment
+        #     self.target_y = random.uniform(-1.90, -1.60) 
+        # elif area == 1:
+        #     self.target_x = random.uniform(-1.90, -1.60)  # Adjust the range to fit your environment
+        #     self.target_y = random.uniform(1.60, 1.90) 
+        # elif area == 2:
+        #     self.target_x = random.uniform(1.60, 1.90)  # Adjust the range to fit your environment
+        #     self.target_y = random.uniform(-1.90, -1.60)
+        # elif area == 3:
+        #     self.target_x = random.uniform(1.60, 1.90)  # Adjust the range to fit your environment
+        #     self.target_y = random.uniform(1.60, 1.90)
+
+        self.target_x = random.uniform(-1.90, 1.90)
+        self.target_y = random.uniform(-1.90, 1.90)
 
 
 
