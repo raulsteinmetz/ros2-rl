@@ -179,13 +179,13 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         # Learning rate for actor-critic models
-        critic_lr = 0.0001
-        actor_lr = 0.0005
+        critic_lr = 0.001
+        actor_lr = 0.005
 
         # Discount factor for future rewards
-        gamma = 0.995
+        gamma = 0.99
         # Used to update target networks
-        tau = 0.01
+        tau = 0.001
 
         agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
         agent.load_models()
