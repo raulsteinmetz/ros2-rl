@@ -179,10 +179,10 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         agent = Agent(input_dims=[num_states], action_space_high=upper_bound, n_actions=num_actions)
-        # agent.load_models()
+        agent.load_models()
 
         max_episodes = 5000  # for example
-        max_steps_per_episode = 400  # for example
+        max_steps_per_episode = 150  # for example
 
         acum_rwds = []
         mov_avg_rwds = []
@@ -211,7 +211,7 @@ class RobotControllerNode(Node):
 
                 cmd_vel_msg = Twist()
                 cmd_vel_msg.linear.x = np.abs(float(action[0])) # only forward for now
-                cmd_vel_msg.angular.z = float(action[1])
+                cmd_vel_msg.angular.z = float(action[1]) * 2 # more angular control
                 self.cmd_vel_publisher.publish(cmd_vel_msg)
                 rclpy.spin_once(self, timeout_sec=0.5)
 
@@ -228,6 +228,9 @@ class RobotControllerNode(Node):
 
                 # reward
                 reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32)
+
+                if step == max_steps_per_episode - 1:
+                    reward = -10
 
                 agent.remember(state, action, reward, state_, done)
                 state = state_
@@ -285,8 +288,23 @@ class RobotControllerNode(Node):
             self.get_logger().info('service not available, waiting again...')
 
         # Generate random coordinates within a specific range for the mark's position
-        self.target_x = random.uniform(-1.75, 1.75)  # Adjust the range to fit your environment
-        self.target_y = random.uniform(-1.75, 1.75)
+        area = np.random.randint(0, 4)
+
+        if area == 0: 
+            self.target_x = random.uniform(-1.90, -1.60)  # Adjust the range to fit your environment
+            self.target_y = random.uniform(-1.90, -1.60) 
+        elif area == 1:
+            self.target_x = random.uniform(-1.90, -1.60)  # Adjust the range to fit your environment
+            self.target_y = random.uniform(1.60, 1.90) 
+        elif area == 2:
+            self.target_x = random.uniform(1.60, 1.90)  # Adjust the range to fit your environment
+            self.target_y = random.uniform(-1.90, -1.60)
+        elif area == 3:
+            self.target_x = random.uniform(1.60, 1.90)  # Adjust the range to fit your environment
+            self.target_y = random.uniform(1.60, 1.90)
+
+
+
         fixed_z = 0.01  # Fixed z coordinate, just above ground level
 
 
