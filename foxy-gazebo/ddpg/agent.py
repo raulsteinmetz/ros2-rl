@@ -85,7 +85,8 @@ class Agent:
         # Making the weights equal initially
         self.target_actor.set_weights(self.actor.get_weights())
         self.target_critic.set_weights(self.critic.get_weights())
-
+        
+        # self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(noise_std) * np.ones(1)) # original
         self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.05) * np.ones(1), theta=0.05) # test for environment 1
         # self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.1) * np.ones(1), theta=0.1) # test for environment 2
     
