@@ -7,50 +7,55 @@ import os
 
 
 def get_actor(state_space, action_high, action_space):
-    # Initialize weights between -3e-3 and 3-e3
     last_init = tf.random_uniform_initializer(minval=-0.003, maxval=0.003)
 
     inputs = keras.layers.Input(shape=(state_space,))
+    # Regular dense layer with 512 units
+    out = keras.layers.Dense(512, activation="relu")(inputs)
+    # Uncomment below line to add regularizers and dropout
     # out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs)
-    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs) # test for environment 1
-    out = keras.layers.Dropout(0.1)(out) # Dropout
-    # out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
-    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out) # test for environment 1
-    out = keras.layers.Dropout(0.1)(out) # Dropout
+    # out = keras.layers.Dropout(0.1)(out) # Dropout layer
+    out = keras.layers.Dense(512, activation="relu")(out)
+    out = keras.layers.Dense(512, activation="relu")(out)
+    
+    # Separate outputs for linear and angular velocities
+    lin_vel = keras.layers.Dense(1, activation="sigmoid")(out) # Linear velocity with sigmoid activation
+    ang_vel = keras.layers.Dense(1, activation="tanh")(out) # Angular velocity with tanh activation
+    outputs = keras.layers.Concatenate()([lin_vel, ang_vel])
+    # outputs = keras.layers.Concatenate()([lin_vel, ang_vel], kernel_initializar=last_init)
 
-    # bellow i chaged 1 for action_space!!!!
-    outputs = keras.layers.Dense(action_space, activation="tanh", kernel_initializer=last_init)(out)
-
+    # Scale the outputs by the action high
     outputs = outputs * action_high
     model = tf.keras.Model(inputs, outputs)
     return model
 
-
 def get_critic(state_space, action_space):
-    # State as input
+    # State input
     state_input = keras.layers.Input(shape=(state_space))
-    state_out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_input)
-    state_out = keras.layers.Dropout(0.1)(state_out)  # Aplica dropout
-    state_out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_out)
-    state_out = keras.layers.Dropout(0.1)(state_out)  # Aplica dropout novamente
-
-    # Action as input
+    # Regular dense layer for state pathway
+    state_out = keras.layers.Dense(512, activation="relu")(state_input)
+    # Uncomment below lines to add regularizers and dropout for state pathway
+    # state_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_input)
+    # state_out = keras.layers.Dropout(0.1)(state_out) # Dropout layer
+    
     action_input = keras.layers.Input(shape=(action_space))
-    action_out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(action_input)
-    action_out = keras.layers.Dropout(0.1)(action_out)  # Aplica dropout
+    # Regular dense layer for action pathway
+    action_out = keras.layers.Dense(512, activation="relu")(action_input)
+    # Uncomment below lines to add regularizers and dropout for action pathway
+    # action_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(action_input)
+    # action_out = keras.layers.Dropout(0.1)(action_out) # Dropout layer
 
-    # Both are passed through separate layer before concatenating
+    # Concatenate state and action pathways
     concat = keras.layers.Concatenate()([state_out, action_out])
+    
+    # Regular dense layers after concatenation
+    out = keras.layers.Dense(512, activation="relu")(concat)
+    out = keras.layers.Dense(512, activation="relu")(out)
+    outputs = keras.layers.Dense(1, activation="linear")(out) # Output Q value with linear activation
 
-    out = keras.layers.Dense(256, activation="relu")(concat)
-    out = keras.layers.Dense(256, activation="relu")(out)
-    outputs = keras.layers.Dense(1)(out)
-
-    # Outputs single value for given state-action
+    # Outputs a single value for a given state-action
     model = tf.keras.Model([state_input, action_input], outputs)
-
     return model
-
 
 class Agent:
     def __init__(self, state_space, action_space, action_high,
