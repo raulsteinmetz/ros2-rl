@@ -10,12 +10,12 @@ def get_actor(state_space, action_high, action_space):
     last_init = tf.random_uniform_initializer(minval=-0.003, maxval=0.003)
 
     inputs = keras.layers.Input(shape=(state_space,))
-    out = keras.layers.Dense(128, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs)
-    out = keras.layers.Dropout(0.1)(out) 
-    out = keras.layers.Dense(128, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
-    out = keras.layers.Dropout(0.1)(out) 
-    out = keras.layers.Dense(128, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
-    out = keras.layers.Dropout(0.1)(out) 
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs)
+    out = keras.layers.Dropout(0.1)(out)
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
+    out = keras.layers.Dropout(0.1)(out)
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
+    out = keras.layers.Dropout(0.1)(out)
     
     # Separate outputs for linear and angular velocities
     lin_vel = keras.layers.Dense(1, activation="sigmoid", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out) # Linear velocity with sigmoid activation
@@ -32,20 +32,20 @@ def get_critic(state_space, action_space):
     # State input
     state_input = keras.layers.Input(shape=(state_space))
     # Regular dense layer for state pathway
-    state_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_input)
+    state_out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_input)
     state_out = keras.layers.Dropout(0.1)(state_out)
     
     action_input = keras.layers.Input(shape=(action_space))
     # Regular dense layer for action pathway
-    action_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(action_input)
+    action_out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(action_input)
     action_out = keras.layers.Dropout(0.1)(action_out)
 
     # Concatenate state and action pathways
     concat = keras.layers.Concatenate()([state_out, action_out])
     
     # Regular dense layers after concatenation
-    out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(concat)
-    out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(concat)
+    out = keras.layers.Dense(256, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
     outputs = keras.layers.Dense(1, activation="linear", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out) # Output Q value with linear activation
 
     # Outputs a single value for a given state-action
