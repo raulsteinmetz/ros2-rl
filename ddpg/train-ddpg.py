@@ -160,7 +160,7 @@ class RobotControllerNode(Node):
         # rewards variables
         rarrive = 100
         rcollide = -10
-        rtimeout = -5
+        rtimeout = -10
         cr1 = 1.0
         cr2 = -1.0
         cd = 0.3 # Arrival threshold
@@ -181,10 +181,10 @@ class RobotControllerNode(Node):
             print('Episode ended without reaching target')
             done = True
             reward = rtimeout
-        elif (self.last_distance - distance) > 0:
-            reward = cr1 * (self.last_distance - distance)
-        else:
-            reward = cr2
+        # elif (self.last_distance - distance) > 0:
+        #     reward = cr1 * (self.last_distance - distance)
+        # else:
+        #     reward = cr2
 
         return reward, done
 
@@ -196,8 +196,8 @@ class RobotControllerNode(Node):
         lower_bound = -.25
 
         # Learning rate for actor-critic models
-        critic_lr = 0.001
-        actor_lr = 0.005
+        critic_lr = 0.0001
+        actor_lr = 0.0005
 
         # Discount factor for future rewards
         gamma = 0.99

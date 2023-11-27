@@ -71,8 +71,8 @@ class Agent:
 
         # self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
         # self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr * 0.1) # test for environment 1
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr * 0.1) # test for environment 1
+        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr * 0.01) # test for environment 1
+        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr * 0.01) # test for environment 1
 
         self.action_high = action_high
         self.action_low = action_low
@@ -87,8 +87,9 @@ class Agent:
         self.target_critic.set_weights(self.critic.get_weights())
         
         # self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(noise_std) * np.ones(1)) # original
-        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.05) * np.ones(1), theta=0.05) # test for environment 1
+        # self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.05) * np.ones(1), theta=0.05) # test for environment 1
         # self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.1) * np.ones(1), theta=0.1) # test for environment 2
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.02) * np.ones(1), theta=0.1) # Test for environment 2
     
     # Eager execution is turned on by default in TensorFlow 2. Decorating with tf.function allows
     # TensorFlow to build a static graph out of the logic and computations in our function.
