@@ -153,7 +153,7 @@ class RobotControllerNode(Node):
 
         return state
         
-    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps_per_episode, step):
+    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps_per_episode, step, angular_vel):
         reward = 0
         done = False
 
@@ -185,6 +185,9 @@ class RobotControllerNode(Node):
         #     reward = cr1 * (self.last_distance - distance)
         # else:
         #     reward = cr2
+        # Penalty for moving only circularly
+        angular_vel_penalty = -abs(angular_vel)
+        reward += angular_vel_penalty
 
         return reward, done
 
@@ -256,7 +259,7 @@ class RobotControllerNode(Node):
                 # self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 # reward
-                reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32, max_steps_per_episode, step)
+                reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32, max_steps_per_episode, step, cmd_vel_msg.angular.z)
 
                 self.last_distance = new_distance
 
