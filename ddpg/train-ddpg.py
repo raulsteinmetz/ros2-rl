@@ -55,6 +55,7 @@ class RobotControllerNode(Node):
         # targethttps://gazebosim.org/docs/harmonic/comparison
         self.target_y = 0
         self.target_x = 0
+        self.last_distance = 0
 
         # Start the main RL control loop
         self.rl_control_loop()
@@ -147,27 +148,43 @@ class RobotControllerNode(Node):
 
         state, _, _, _, _, _ = self.get_state(cmd_vel_msg.linear.x, cmd_vel_msg.angular.z)
 
+        initial_distance = np.sqrt((0 - self.target_x)**2 + (0 - self.target_y)**2)
+        self.last_distance = initial_distance
+
         return state
         
     def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps_per_episode, step):
         reward = 0
         done = False
 
-        # distance to target
-        distance = np.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2) 
+        # rewards variables
+        rarrive = 100
+        rcollide = -10
+        rtimeout = -5
+        cr1 = 1.0
+        cr2 = -1.0
+        cd = 0.3 # Arrival threshold
+        co = 0.19 # Collision threshold
 
-        if distance < 0.3:
+        # distance to target
+        distance = np.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2)
+
+        if distance < cd:
             print('Episode ended with target reached')
+            reward = rarrive
             done = True
-            reward = 100
-        elif np.min(lidar_32) < 0.19:
+        elif np.min(lidar_32) < co:
             print('Episode ended with collision')
+            reward = rcollide
             done = True
-            reward = -10
         elif step == (max_steps_per_episode - 1):
             print('Episode ended without reaching target')
             done = True
-            reward = -10
+            reward = rtimeout
+        elif (self.last_distance - distance) > 0:
+            reward = cr1 * (self.last_distance - distance)
+        else:
+            reward = cr2
 
         return reward, done
 
@@ -233,12 +250,15 @@ class RobotControllerNode(Node):
                 rclpy.spin_once(self, timeout_sec=0.5)
 
                 state_, turtle_x, turtle_y, target_x, target_y, lidar32 = self.get_state(0, 0)
+                new_distance = np.sqrt((turtle_x - target_x)**2 + (turtle_y - target_y)**2)
 
                 # pause again
                 # self.call_service_sync(self.pause_simulation_client, Empty.Request())
 
                 # reward
                 reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32, max_steps_per_episode, step)
+
+                self.last_distance = new_distance
 
                 agent.mem.record((state, action, reward, state_))
                 state = state_
@@ -265,17 +285,9 @@ class RobotControllerNode(Node):
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
 
-            if episode % 50 == 0:
-            # Plot raw rewards and moving average
-                # plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
-                # plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
-                # plt.xlabel("Episode")
-                # plt.ylabel("Acumulated Reward")
-                # plt.legend()  # Add legend to the plot
-                # plt.savefig('acum_rwds.png')
-                with self.tensorboard_writer.as_default():
-                    tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
-                    tf.summary.scalar('Moving Average Rewards', mov_avg_rwds[-1], step=episode)
+            with self.tensorboard_writer.as_default():
+                tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
+                tf.summary.scalar('Moving Average Rewards', mov_avg_rwds[-1], step=episode)
         return
 
     def call_service_sync(self, client, request):
