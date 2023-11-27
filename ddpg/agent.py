@@ -150,6 +150,7 @@ class Agent:
         # We make sure action is within bounds
         # sampled_actions = np.abs(sampled_actions)
         legal_action = np.clip(sampled_actions, self.action_low, self.action_high)
+        legal_action[1] = np.clip(legal_action[1], -0.5, 0.5)  # Limiting angular velocity to avoid perpetual rotation
 
         return [np.squeeze(legal_action)]
 
