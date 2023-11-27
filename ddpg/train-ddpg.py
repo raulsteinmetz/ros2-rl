@@ -239,7 +239,7 @@ class RobotControllerNode(Node):
 
                 cmd_vel_msg = Twist()
                 cmd_vel_msg.linear.x = np.abs(float(action[0])) # only forward for now
-                cmd_vel_msg.angular.z = float(action[1]) * 2
+                cmd_vel_msg.angular.z = float(action[1]) #* 2
                 self.cmd_vel_publisher.publish(cmd_vel_msg)
                 rclpy.spin_once(self, timeout_sec=0.5)
 
