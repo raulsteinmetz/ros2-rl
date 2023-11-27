@@ -291,6 +291,9 @@ class RobotControllerNode(Node):
             with self.tensorboard_writer.as_default():
                 tf.summary.scalar('Acumulated Reward', acum_reward, step=episode)
                 tf.summary.scalar('Moving Average Rewards', mov_avg_rwds[-1], step=episode)
+                if episode % 50 == 0:
+                    tf.summary.scalar('Moving Average Rewards each 50 episodes', mov_avg_rwds[-1], step=episode)
+
         return
 
     def call_service_sync(self, client, request):
