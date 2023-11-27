@@ -10,10 +10,8 @@ def get_actor(state_space, action_high, action_space):
     last_init = tf.random_uniform_initializer(minval=-0.003, maxval=0.003)
 
     inputs = keras.layers.Input(shape=(state_space,))
-    # Regular dense layer with 512 units
     out = keras.layers.Dense(128, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(inputs)
     out = keras.layers.Dropout(0.1)(out) 
-    # Uncomment below line to add regularizers and dropout
     out = keras.layers.Dense(128, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
     out = keras.layers.Dropout(0.1)(out) 
     out = keras.layers.Dense(128, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(out)
@@ -36,17 +34,11 @@ def get_critic(state_space, action_space):
     # Regular dense layer for state pathway
     state_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_input)
     state_out = keras.layers.Dropout(0.1)(state_out)
-    # Uncomment below lines to add regularizers and dropout for state pathway
-    # state_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(state_input)
-    # state_out = keras.layers.Dropout(0.1)(state_out) # Dropout layer
     
     action_input = keras.layers.Input(shape=(action_space))
     # Regular dense layer for action pathway
     action_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(action_input)
     action_out = keras.layers.Dropout(0.1)(action_out)
-    # Uncomment below lines to add regularizers and dropout for action pathway
-    # action_out = keras.layers.Dense(512, activation="relu", kernel_regularizer=tf.keras.regularizers.l2(0.01))(action_input)
-    # action_out = keras.layers.Dropout(0.1)(action_out) # Dropout layer
 
     # Concatenate state and action pathways
     concat = keras.layers.Concatenate()([state_out, action_out])
