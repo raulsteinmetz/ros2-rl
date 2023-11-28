@@ -18,7 +18,7 @@ import numpy as np
 from agent import Agent
 
 # other
-from ddpg.utils import *
+from utils import *
 from time import sleep
 from os import system
 from datetime import datetime
@@ -242,6 +242,7 @@ class RobotControllerNode(Node):
                 action = agent.policy(torch_prev_state)[0]
 
                 cmd_vel_msg = Twist()
+
                 cmd_vel_msg.linear.x = np.abs(float(action[0])) # only forward for now
                 cmd_vel_msg.angular.z = float(action[1]) #* 2
                 self.cmd_vel_publisher.publish(cmd_vel_msg)
@@ -290,10 +291,10 @@ class RobotControllerNode(Node):
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
 
             with self.tensorboard_writer as writer:
-                writer.add_scalar('Acumulated Reward', acum_reward, step=episode)
-                writer.summary.scalar('Moving Average Rewards', mov_avg_rwds[-1], step=episode)
+                writer.add_scalar('Acumulated Reward', acum_reward, global_step=episode)
+                writer.add_scalar('Moving Average Rewards', mov_avg_rwds[-1], global_step=episode)
                 if episode % 50 == 0:
-                    writer.summary.scalar('Moving Average Rewards each 50 episodes', mov_avg_rwds[-1], step=episode)
+                    writer.add_scalar('Moving Average Rewards each 50 episodes', mov_avg_rwds[-1], global_step=episode)
 
         return
 
