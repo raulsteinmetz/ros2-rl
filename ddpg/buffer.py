@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Buffer:
-    def __init__(self, state_space, action_space, buffer_capacity=150000, batch_size=64):
+    def __init__(self, state_space, action_space, buffer_capacity=150000, batch_size=128):
         # Number of "experiences" to store at max
         self.buffer_capacity = buffer_capacity
         # Num of tuples to train on.
