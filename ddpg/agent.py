@@ -5,55 +5,72 @@ import torch.optim as optim
 import numpy as np
 from buffer import Buffer
 from noise import OUActionNoise
-from utils import get_gpu
+from utils import get_gpu, fanin_init
 import os
 
 device = get_gpu()
 
 
 class Actor(nn.Module):
-    def __init__(self, state_space, action_high, action_space):
+    def __init__(self, state_space, action_high, action_space, action_limit_v=0.22, action_limit_w=1.0):
         super(Actor, self).__init__()
-        self.fc1 = nn.Linear(state_space, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, 256)
-        self.lin_vel = nn.Linear(256, 1)
-        self.ang_vel = nn.Linear(256, 1)
-        self.action_high = action_high
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.EPS = 0.003
+        self.action_limit_v = action_limit_v
+        self.action_limit_w = action_limit_w
+        self.fa1 = nn.Linear(state_space, 512)
+        self.fa1.weight.data = fanin_init(self.fa1.weight.data.size())
 
-    def forward(self, x):
-        x = T.relu(self.fc1(x))
-        x = T.dropout(x, 0.1, train=self.training)
-        x = T.relu(self.fc2(x))
-        x = T.dropout(x, 0.1, train=self.training)
-        x = T.relu(self.fc3(x))
-        lin_vel = T.sigmoid(self.lin_vel(x))
-        ang_vel = T.tanh(self.ang_vel(x))
-        return T.cat((lin_vel, ang_vel), dim=1) * self.action_high
+        self.fa2 = nn.Linear(512, 512)
+        self.fa2.weight.data = fanin_init(self.fa2.weight.data.size())
+
+        self.fa3 = nn.Linear(512, action_space)
+        self.fa3.weight.data.uniform_(-self.EPS, self.EPS)
+
+    def forward(self, state):
+        x = T.relu(self.fa1(state))
+        # x = T.dropout(x, 0.1, train=self.training)
+        x = T.relu(self.fa2(x))
+        # x = T.dropout(x, 0.1, train=self.training)
+        # x = T.relu(self.fc3(x))
+        # lin_vel = T.sigmoid(self.lin_vel(x))
+        # ang_vel = T.tanh(self.ang_vel(x))
+        # return T.cat((lin_vel, ang_vel), dim=1) * self.action_high
+        action = self.fa3(x)
+        if state.shape == T.Size([14]):
+            action[0] = T.sigmoid(action[0]) * self.action_limit_v
+            action[1] = T.tanh(action[1]) * self.action_limit_v
+        else:
+            action[:, 0] = T.sigmoid(action[:, 0]) * self.action_limit_w
+        return action
     
 class Critic(nn.Module):
     def __init__(self, state_space, action_space):
         super(Critic, self).__init__()
-        self.state_fc = nn.Linear(state_space, 256)
-        self.action_fc = nn.Linear(action_space, 256)
-        self.fc1 = nn.Linear(512, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.output = nn.Linear(256, 1)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.EPS = 0.003
+        self.fc1 = nn.Linear(state_space, 256)
+        self.fc1.weight.data = fanin_init(self.fc1.weight.data.size())
+
+        self.fa1 = nn.Linear(action_space, 256)
+        self.fa1.weight.data = fanin_init(self.fa1.weight.data.size())
+
+        self.fca1 = nn.Linear(512, 512)
+        self.fca1.weight.data = fanin_init(self.fca1.weight.data.size())
+
+        self.fca2 = nn.Linear(512, 1)
+        self.fca2.weight.data.uniform_(-self.EPS, self.EPS)
 
 
     def forward(self, state, action):
-        state_out = T.relu(self.state_fc(state))
-        action_out = T.relu(self.action_fc(action))
+        state_out = T.relu(self.fc1(state))
+        action_out = T.relu(self.fa1(action))
         concat = T.cat([state_out, action_out], dim=1)
-        x = T.relu(self.fc1(concat))
-        x = T.relu(self.fc2(x))
-        return self.output(x)
+        x = T.relu(self.fca1(concat))
+        x = T.relu(self.fca2(x))
+        return x
     
 class Agent:
     def __init__(self, state_space, action_space, action_high, action_low, gamma, tau, critic_lr, actor_lr, noise_std):
-        self.mem = Buffer(state_space, action_space, 50000, 64)
+        self.mem = Buffer(state_space, action_space, 150000, 128)
         self.actor = Actor(state_space, action_high, action_space).to(device)
         self.critic = Critic(state_space, action_space).to(device)
 
@@ -72,7 +89,7 @@ class Agent:
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.02) * np.ones(1), theta=0.1)
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.02) * np.ones(1), theta=0.2)
 
     def update(self, state_batch, action_batch, reward_batch, next_state_batch):
         # state_batch = T.tensor(state_batch, dtype=T.float32)
@@ -124,7 +141,7 @@ class Agent:
         for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-        # Save and load model weights
+    # Save and load model weights
     def try_load_model_weights(self, model, file_path):
         if os.path.exists(file_path):
             model.load_state_dict(T.load(file_path))

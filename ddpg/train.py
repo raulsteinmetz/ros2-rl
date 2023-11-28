@@ -200,7 +200,7 @@ class RobotControllerNode(Node):
 
         # Learning rate for actor-critic models
         critic_lr = 0.0001
-        actor_lr = 0.0005
+        actor_lr = 0.0001
 
         # Discount factor for future rewards
         gamma = 0.99
@@ -404,6 +404,6 @@ Ornstein-Uhlenbeck noise parameters:
 STATE_DIMENSION = 14, 
 ACTION_DIMENSION = 2
 ACTION LIMITS: 
-    ACTION_V_MAX = 0.22 (linear velocity), 
-    ACTION_W_MAX = 1.0 (angular velocity)
+    ACTION_V_MAX = 0.22 # m/s
+    ACTION_W_MAX = 1. # rad/s
 """
