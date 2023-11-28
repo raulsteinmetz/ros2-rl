@@ -181,6 +181,7 @@ class RobotControllerNode(Node):
             print('Episode ended without reaching target')
             done = True
             reward = rtimeout
+        # Reward/penalty for getting close/away from the target
         # elif (self.last_distance - distance) > 0:
         #     reward = cr1 * (self.last_distance - distance)
         # else:
@@ -290,11 +291,11 @@ class RobotControllerNode(Node):
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
         
-            if episode % 50:
+            if episode % 50 == 0:
                 with self.tensorboard_writer as writer:
                     writer.add_scalar('Acumulated Reward', acum_reward, global_step=episode)
                     writer.add_scalar('Moving Average Rewards', mov_avg_rwds[-1], global_step=episode)
-
+        self.tensorboard_writer.close()
         return
 
     def call_service_sync(self, client, request):
