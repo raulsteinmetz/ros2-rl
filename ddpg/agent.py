@@ -163,14 +163,14 @@ class Agent:
         if os.path.exists(file_path):
             model.load_weights(file_path)
 
-    def save_models(self, directory="./stage-two-models"):
+    def save_models(self, directory="./stage-two-second-train-models"):
         """Saves the target actor and critic models."""
         if not os.path.exists(directory):
             os.makedirs(directory)
         self.target_actor.save_weights(os.path.join(directory, "target_actor.h5"))
         self.target_critic.save_weights(os.path.join(directory, "target_critic.h5"))
 
-    def load_models(self, directory="./stage-two-models"):
+    def load_models(self, directory="./stage-two-second-train-models"):
         """Loads the target actor and critic models."""
         self.try_load_model_weights(self.target_actor, os.path.join(directory, "target_actor.h5"))
         self.try_load_model_weights(self.target_critic, os.path.join(directory, "target_critic.h5"))
