@@ -388,3 +388,22 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+"""
+########## DDPG hyperparameters from previou implementations ##########
+(Learning Rate): LEARNING_RATE = 0.001
+(Gamma): GAMMA = 0.99
+(Tau): TAU = 0.001
+(Batch Size): BATCH_SIZE = 128
+Memory Buffer: MAX_BUFFER = 150000
+Ornstein-Uhlenbeck noise parameters:
+    Mu: mu=0
+    Theta: theta=0.15
+    Sigma: sigma=0.2
+(Fan-in Initialization) e EPS = 0.003 para limites uniformes
+STATE_DIMENSION = 14, 
+ACTION_DIMENSION = 2
+ACTION LIMITS: 
+    ACTION_V_MAX = 0.22 (linear velocity), 
+    ACTION_W_MAX = 1.0 (angular velocity)
+"""
