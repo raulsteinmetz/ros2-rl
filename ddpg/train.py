@@ -186,8 +186,8 @@ class RobotControllerNode(Node):
         # else:
         #     reward = cr2
         # Penalty for moving only circularly
-        angular_vel_penalty = -abs(angular_vel)
-        reward += angular_vel_penalty
+        # angular_vel_penalty = -abs(angular_vel)
+        # reward += angular_vel_penalty
 
         return reward, done
 
@@ -289,7 +289,7 @@ class RobotControllerNode(Node):
                     best_moving_average = mov_avg_rwds[-1]
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
-
+        
             with self.tensorboard_writer as writer:
                 writer.add_scalar('Acumulated Reward', acum_reward, global_step=episode)
                 writer.add_scalar('Moving Average Rewards', mov_avg_rwds[-1], global_step=episode)
