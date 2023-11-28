@@ -290,11 +290,10 @@ class RobotControllerNode(Node):
                     agent.save_models()
                     print("Saving best models with moving average reward {}...".format(best_moving_average))
         
-            with self.tensorboard_writer as writer:
-                writer.add_scalar('Acumulated Reward', acum_reward, global_step=episode)
-                writer.add_scalar('Moving Average Rewards', mov_avg_rwds[-1], global_step=episode)
-                if episode % 50 == 0:
-                    writer.add_scalar('Moving Average Rewards each 50 episodes', mov_avg_rwds[-1], global_step=episode)
+            if episode % 50:
+                with self.tensorboard_writer as writer:
+                    writer.add_scalar('Acumulated Reward', acum_reward, global_step=episode)
+                    writer.add_scalar('Moving Average Rewards', mov_avg_rwds[-1], global_step=episode)
 
         return
 
