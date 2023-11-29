@@ -27,7 +27,8 @@ from datetime import datetime
 class RobotControllerNode(Node):
     def __init__(self):
         super().__init__("robot_controller_node")
-
+        # Is training or not
+        self.is_training = True
         # Publishers, Subscribers, and Clients
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 1) # might have to ajust the buffers, do not know their influence just yet
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 1)
@@ -198,6 +199,8 @@ class RobotControllerNode(Node):
 
         upper_bound = .25
         lower_bound = -.25
+        ACTION_V_MAX = 0.22 # m/s
+        ACTION_W_MAX = 1. # rad/s
 
         # Learning rate for actor-critic models
         critic_lr = 0.0001
@@ -221,6 +224,14 @@ class RobotControllerNode(Node):
 
         best_moving_average = -np.inf
 
+        if self.is_training:
+            var_v = ACTION_V_MAX * 0.30
+            var_w = ACTION_W_MAX * 2 * 0.15
+
+        else:
+            var_v = ACTION_V_MAX * 0.10
+            var_w = ACTION_W_MAX * 0.10
+
         for episode in range(max_episodes):
             step = 0
             done = False
@@ -239,8 +250,12 @@ class RobotControllerNode(Node):
                 # tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
                 torch_prev_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float32), 0)
 
-
-                action = agent.policy(torch_prev_state)[0]
+                if self.is_training:
+                    action = agent.policy(torch_prev_state)[0]
+                    action[0] = np.clip(np.random.normal(action[0], var_v), 0., ACTION_V_MAX)
+                    action[1] = np.clip(np.random.normal(action[1], var_w), -ACTION_W_MAX, ACTION_W_MAX)
+                else:
+                    action = agent.policy(torch_prev_state, use_noise=False)[0]
 
                 cmd_vel_msg = Twist()
 
@@ -270,7 +285,11 @@ class RobotControllerNode(Node):
                 state = state_
                 acum_reward += reward
 
-                agent.learn()
+                # Update exploration rate
+                if self.is_training:
+                    var_v = max([var_v * 0.99999, 0.30 * upper_bound])
+                    var_w = max([var_w * 0.99999, 0.30 * upper_bound])
+                    agent.learn()
                 agent.update_target()
 
                 step += 1
