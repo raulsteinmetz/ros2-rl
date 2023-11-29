@@ -127,12 +127,16 @@ class Agent:
 
         self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
-    def policy(self, state):
+    def policy(self, state, add_noise=True):
         state = state.clone().detach().to(device)
-        # state = T.tensor(state, dtype=T.float32)
-        noise = self.noise()
-        sampled_actions = self.actor(state).detach().cpu().numpy() + noise
-        legal_action = np.clip(sampled_actions, self.action_low, self.action_high)
+        action = self.actor(state).detach()
+        if add_noise:
+            noise = self.noise()
+            action = action.cpu() + noise
+            # sampled_actions = self.actor(state).detach().cpu().numpy() + noise
+        else:
+            action = action.cpu().numpy()
+        legal_action = np.clip(action.numpy(), self.action_low, self.action_high)
         return (legal_action)
     
     def update_target(self):
