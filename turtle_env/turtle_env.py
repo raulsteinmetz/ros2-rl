@@ -216,12 +216,29 @@ class Env(Node):
             pass
 
 
-    def step(self, action, step, max_steps_per_episode):
+    def step(self, action, step, max_steps_per_episode, discrete):
         rclpy.spin_once(self, timeout_sec=0.5)
-        self.publish_vel(np.abs(float(action[0])), float(action[1]) * 2)
+        if discrete == True:
+            if action == 0:
+                self.publish_vel(0.1, -.6)
+            elif action == 1:
+                self.publish_vel(0.1, -.3)
+            elif action == 2:
+                self.publish_vel(0.1, 0.0)
+            elif action == 3:
+                self.publish_vel(0.1, .3)
+            elif action == 4:
+                self.publish_vel(0.1, .6)
+        else:
+            self.publish_vel(np.abs(float(action[0])), float(action[1]) * 2)
+
         rclpy.spin_once(self, timeout_sec=0.5)
 
-        state_, turtle_x, turtle_y, lidar32 = self.get_state(np.abs(float(action[0])), float(action[1]) * 2)
+
+        if discrete == True:
+            state_, turtle_x, turtle_y, lidar32 = self.get_state(action, action) # passing action twice, so the dimentions of the network remain the same
+        else:
+            state_, turtle_x, turtle_y, lidar32 = self.get_state(np.abs(float(action[0])), float(action[1]) * 2)
 
         reward, done = self.get_reward(turtle_x, turtle_y, self.target_x, self.target_y, lidar32, step, max_steps_per_episode)
 
@@ -232,7 +249,7 @@ class Trainer():
     def __init__(self):
         self.env = Env()
 
-    def train(self, agent, episodes, max_steps, load_models=True, stage=1):
+    def train(self, agent, episodes, max_steps, load_models=True, stage=1, discrete=False):
         if load_models:
             agent.load_models()
 
@@ -254,7 +271,7 @@ class Trainer():
 
             while not done and step < max_steps:
                 action = agent.choose_action(state)
-                reward, done, state_ = self.env.step(action, step, max_steps)
+                reward, done, state_ = self.env.step(action, step, max_steps, discrete)
 
                 agent.remember(state, action, reward, state_, done)
                 state = state_
