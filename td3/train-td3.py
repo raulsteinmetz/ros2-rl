@@ -132,8 +132,6 @@ class RobotControllerNode(Node):
         cmd_vel_msg.angular.z = 0.0
         self.cmd_vel_publisher.publish(cmd_vel_msg)
 
-        # unpause
-        # self.call_service_sync(self.unpause_simulation_client, Empty.Request())
 
         # give it some spins to update the lidar and not bug detect collision
         self.scan_data = None
@@ -308,9 +306,6 @@ class RobotControllerNode(Node):
             self.target_x = random.uniform(1.60, 1.90)
             self.target_y = random.uniform(1.60, 1.90)
 
-        # self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
-        # self.target_y = random.uniform(-1.90, 1.90)
-
         fixed_z = 0.01  # Fixed z coordinate, just above ground level
 
 
@@ -374,7 +369,6 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to delete mark.")
 
-        # sleep(1)
 
 
 

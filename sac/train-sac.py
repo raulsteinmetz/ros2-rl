@@ -1,7 +1,7 @@
 # env imports
 import rclpy
 from rclpy.node import Node
-from std_srvs.srv import Empty  # Service for pausing and unpausing the simulation4
+from std_srvs.srv import Empty
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
@@ -30,10 +30,6 @@ class RobotControllerNode(Node):
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 1)
         self.scan_subscription = self.create_subscription(LaserScan, '/scan', self.scan_callback, 1)
 
-        # Clients to pause and unpause the Gazebo simulation
-        # self.pause_simulation_client = self.create_client(Empty, '/pause_physics')
-        # self.unpause_simulation_client = self.create_client(Empty, '/unpause_physics')
-        
         # Client to spawn entities in Gazebo
         self.spawn_entity_client = self.create_client(SpawnEntity, '/spawn_entity')
         # Client to delete entities in Gazebo
@@ -371,7 +367,6 @@ class RobotControllerNode(Node):
         else:
             self.get_logger().error("Failed to delete mark.")
 
-        # sleep(1)
 
 
 
