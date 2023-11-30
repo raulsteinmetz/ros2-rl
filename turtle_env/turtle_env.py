@@ -104,7 +104,7 @@ class Env(Node):
 
 
 
-    def reset_simulation(self):
+    def reset_simulation(self, stage):
         # resetting env
         req = Empty.Request()
         while not self.reset_client.wait_for_service(timeout_sec=1.0):
@@ -113,7 +113,7 @@ class Env(Node):
         self.reset_client.call_async(req)
         self.despawn_target_mark()
 
-        self.spawn_target_in_environment()
+        self.spawn_target_in_environment(stage)
         
         self.publish_vel(0.0, 0.0)
 
@@ -155,32 +155,31 @@ class Env(Node):
         return reward, done
 
 
-    def spawn_target_in_environment(self):
+    def spawn_target_in_environment(self, stage):
         # wait for spawn service to be available
         while not self.spawn_entity_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
         # generate random position for the target mark
-        # this is used for stage 2
-        # area = np.random.randint(0, 4)
-        # if area == 0: 
-        #     self.target_x = random.uniform(-1.90, -1.60)
-        #     self.target_y = random.uniform(-1.90, -1.60) 
-        # elif area == 1:
-        #     self.target_x = random.uniform(-1.90, -1.60)
-        #     self.target_y = random.uniform(1.60, 1.90) 
-        # elif area == 2:
-        #     self.target_x = random.uniform(1.60, 1.90)
-        #     self.target_y = random.uniform(-1.90, -1.60)
-        # elif area == 3:
-        #     self.target_x = random.uniform(1.60, 1.90)
-        #     self.target_y = random.uniform(1.60, 1.90)
+        if stage == 1:
+            self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
+            self.target_y = random.uniform(-1.90, 1.90)
+        elif stage == 2:
+            area = np.random.randint(0, 4)
+            if area == 0: 
+                self.target_x = random.uniform(-1.90, -1.60)
+                self.target_y = random.uniform(-1.90, -1.60) 
+            elif area == 1:
+                self.target_x = random.uniform(-1.90, -1.60)
+                self.target_y = random.uniform(1.60, 1.90) 
+            elif area == 2:
+                self.target_x = random.uniform(1.60, 1.90)
+                self.target_y = random.uniform(-1.90, -1.60)
+            elif area == 3:
+                self.target_x = random.uniform(1.60, 1.90)
+                self.target_y = random.uniform(1.60, 1.90)
 
 
-        # this is used for stage 1
-
-        self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
-        self.target_y = random.uniform(-1.90, 1.90)
 
         fixed_z = 0.01  # fixed z coordinate, just above ground level
 
@@ -233,7 +232,7 @@ class Trainer():
     def __init__(self):
         self.env = Env()
 
-    def train(self, agent, episodes, max_steps, load_models=True):
+    def train(self, agent, episodes, max_steps, load_models=True, stage=1):
         if load_models:
             agent.load_models()
 
@@ -248,7 +247,7 @@ class Trainer():
             step = 0
             done = False
 
-            state = self.env.reset_simulation()
+            state = self.env.reset_simulation(stage)
             acum_reward = 0
 
             print('Episode: ', episode)

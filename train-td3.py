@@ -1,5 +1,5 @@
 import rclpy
-from turtle_env import Trainer
+from turtle_env.turtle_env import Trainer
 from td3.td3_torch import Agent
 
 
@@ -11,7 +11,7 @@ def main(args=None):
             max_action=trainer.env.action_upper_bound, min_action=trainer.env.action_lower_bound,
             batch_size=64, layer1_size=150, layer2_size=256, # 400, 300
             n_actions=trainer.env.num_actions)
-    trainer.train(agent, 5000, 140, False)
+    trainer.train(agent, 5000, 140, False, 2)
     trainer.kill_env()
     rclpy.shutdown()
 
