@@ -69,7 +69,7 @@ class Critic(nn.Module):
         return x
     
 class Agent:
-    def __init__(self, state_space, action_space, action_high, action_low, gamma, tau, critic_lr, actor_lr, noise_std):
+    def __init__(self, state_space, action_space, action_high, action_low, gamma, tau, critic_lr, actor_lr, noise_std, batch_size=128):
         self.memory = Buffer(state_space, action_space, 150000, 128)
         self.actor = Actor(state_space, action_high, action_space).to(device)
         self.critic = Critic(state_space, action_space).to(device)
@@ -85,6 +85,7 @@ class Agent:
 
         self.gamma = gamma
         self.tau = tau
+        self.batch_size = batch_size
 
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
@@ -117,7 +118,7 @@ class Agent:
         self.actor_optimizer.step()
 
     def learn(self):
-        if self.memory.mem_cntr < self.batch_size:
+        if self.memory.buffer_counter < self.batch_size:
             return
 
         state_batch, action_batch, reward_batch, next_state_batch = \

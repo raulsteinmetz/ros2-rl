@@ -1,5 +1,6 @@
 import numpy as np
-import tensorflow as T
+import torch as T
+from utils import get_gpu
 
 device = get_gpu()
 
