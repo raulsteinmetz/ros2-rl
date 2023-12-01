@@ -220,15 +220,15 @@ class Env(Node):
         rclpy.spin_once(self, timeout_sec=0.5)
         if discrete == True:
             if action == 0:
-                self.publish_vel(0.1, -.6)
+                self.publish_vel(0.1, -.8)
             elif action == 1:
-                self.publish_vel(0.1, -.3)
+                self.publish_vel(0.1, -.4)
             elif action == 2:
                 self.publish_vel(0.1, 0.0)
             elif action == 3:
-                self.publish_vel(0.1, .3)
+                self.publish_vel(0.1, .4)
             elif action == 4:
-                self.publish_vel(0.1, .6)
+                self.publish_vel(0.1, .8)
         else:
             self.publish_vel(np.abs(float(action[0])), float(action[1]) * 2)
 
