@@ -3,13 +3,10 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from buffer import Buffer
-from noise import OUActionNoise
-from utils import get_gpu, fanin_init
+from ddpg.buffer import Buffer
+from ddpg.noise import OUActionNoise
+from ddpg.utils import get_gpu, fanin_init
 import os
-
-device = get_gpu()
-
 
 class Actor(nn.Module):
     def __init__(self, state_space, action_high, action_space, action_limit_v=0.22, action_limit_w=1.0):
@@ -70,12 +67,13 @@ class Critic(nn.Module):
     
 class Agent:
     def __init__(self, state_space, action_space, action_high, action_low, gamma, tau, critic_lr, actor_lr, noise_std, batch_size=128):
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.memory = Buffer(state_space, action_space, 150000, 128)
-        self.actor = Actor(state_space, action_high, action_space).to(device)
-        self.critic = Critic(state_space, action_space).to(device)
+        self.actor = Actor(state_space, action_high, action_space).to(self.device)
+        self.critic = Critic(state_space, action_space).to(self.device)
 
-        self.target_actor = Actor(state_space, action_high, action_space).to(device)
-        self.target_critic = Critic(state_space, action_space).to(device)
+        self.target_actor = Actor(state_space, action_high, action_space).to(self.device)
+        self.target_critic = Critic(state_space, action_space).to(self.device)
 
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_lr)
@@ -126,8 +124,8 @@ class Agent:
 
         self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
-    def policy(self, state, add_noise=True):
-        state = state.clone().detach().to(device)
+    def sample_normal(self, state, add_noise=True):
+        state = state.clone().detach().to(self.device)
         action = self.actor(state).detach()
         if add_noise:
             noise = self.noise()
@@ -138,9 +136,17 @@ class Agent:
         legal_action = np.clip(action.numpy(), self.action_low, self.action_high)
         return (legal_action)
     
+    def choose_action(self, observation):
+        # Convert observation to tensor and send to device
+        state = T.Tensor([observation]).to(self.device)
+        # Use the sample_normal method of the Agent class
+        action = self.sample_normal(state, add_noise=True)
+        # The action is already a numpy array, so just return it
+        return action.flatten()
+    
     def remember(self, state, action, reward, new_state, done):
         # guardar acoes e consequencias no buffer de memoria
-        self.memory.store_transition(state, action, reward, new_state, done)
+        self.memory.store_transition(state, action, reward, new_state)
 
     def update_target(self):
         for target_param, param in zip(self.target_actor.parameters(), self.actor.parameters()):
@@ -153,12 +159,12 @@ class Agent:
         if os.path.exists(file_path):
             model.load_state_dict(T.load(file_path))
 
-    def save_models(self, directory="./models"):
+    def save_models(self, directory="./ddpg/models"):
         if not os.path.exists(directory):
             os.makedirs(directory)
         T.save(self.target_actor.state_dict(), os.path.join(directory, "target_actor.pth"))
         T.save(self.target_critic.state_dict(), os.path.join(directory, "target_critic.pth"))
 
-    def load_models(self, directory="./models"):
+    def load_models(self, directory="./ddpg./models"):
         self.try_load_model_weights(self.target_actor, os.path.join(directory, "target_actor.pth"))
         self.try_load_model_weights(self.target_critic, os.path.join(directory, "target_critic.pth"))

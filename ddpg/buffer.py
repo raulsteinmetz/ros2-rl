@@ -1,6 +1,6 @@
 import numpy as np
 import torch as T
-from utils import get_gpu
+from ddpg.utils import get_gpu
 
 device = get_gpu()
 
@@ -23,15 +23,15 @@ class Buffer:
         self.next_state_buffer = np.zeros((self.buffer_capacity, state_space))
 
     # Takes (s,a,r,s') obervation tuple as input
-    def record(self, obs_tuple):
+    def store_transition(self, state, action, reward, new_state):
         # Set index to zero if buffer_capacity is exceeded,
         # replacing old records
         index = self.buffer_counter % self.buffer_capacity
 
-        self.state_buffer[index] = obs_tuple[0]
-        self.action_buffer[index] = obs_tuple[1]
-        self.reward_buffer[index] = obs_tuple[2]
-        self.next_state_buffer[index] = obs_tuple[3]
+        self.state_buffer[index] = state
+        self.action_buffer[index] = action
+        self.reward_buffer[index] = reward
+        self.next_state_buffer[index] = new_state
 
         self.buffer_counter += 1
 
