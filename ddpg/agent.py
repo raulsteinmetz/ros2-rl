@@ -8,6 +8,11 @@ from ddpg.noise import OUActionNoise
 from ddpg.utils import get_gpu, fanin_init
 import os
 
+ACTION_V_MAX = 0.22 # m/s
+ACTION_W_MAX = 1. # rad/s
+var_v = ACTION_V_MAX * 0.30
+var_w = ACTION_W_MAX * 2 * 0.15
+
 class Actor(nn.Module):
     def __init__(self, state_space, action_high, action_space, action_limit_v=0.22, action_limit_w=1.0):
         super(Actor, self).__init__()
@@ -124,7 +129,7 @@ class Agent:
 
         self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
-    def sample_normal(self, state, add_noise=True):
+    def policy(self, state, add_noise=True):
         state = state.clone().detach().to(self.device)
         action = self.actor(state).detach()
         if add_noise:
@@ -138,11 +143,17 @@ class Agent:
     
     def choose_action(self, observation):
         # Convert observation to tensor and send to device
-        state = T.Tensor([observation]).to(self.device)
-        # Use the sample_normal method of the Agent class
-        action = self.sample_normal(state, add_noise=True)
-        # The action is already a numpy array, so just return it
-        return action.flatten()
+        state = T.tensor([observation], dtype=T.float32).to(self.device)
+        
+        # Get action from policy
+        action = self.policy(state)[0]
+
+        # Apply noise if in training mode
+        action[0] = np.clip(np.random.normal(action[0], var_v), 0., ACTION_V_MAX)
+        action[1] = np.clip(np.random.normal(action[1], var_w), -ACTION_W_MAX, ACTION_W_MAX)
+
+        # Return the action
+        return action
     
     def remember(self, state, action, reward, new_state, done):
         # guardar acoes e consequencias no buffer de memoria
@@ -153,6 +164,9 @@ class Agent:
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
         for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+
+    def optimize():
+        ...
 
     # Save and load model weights
     def try_load_model_weights(self, model, file_path):
