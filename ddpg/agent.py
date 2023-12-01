@@ -70,7 +70,7 @@ class Critic(nn.Module):
     
 class Agent:
     def __init__(self, state_space, action_space, action_high, action_low, gamma, tau, critic_lr, actor_lr, noise_std):
-        self.mem = Buffer(state_space, action_space, 150000, 128)
+        self.memory = Buffer(state_space, action_space, 150000, 128)
         self.actor = Actor(state_space, action_high, action_space).to(device)
         self.critic = Critic(state_space, action_space).to(device)
 
@@ -117,13 +117,13 @@ class Agent:
         self.actor_optimizer.step()
 
     def learn(self):
-        record_range = min(self.mem.buffer_counter, self.mem.buffer_capacity)
-        batch_indices = np.random.choice(record_range, self.mem.batch_size)
+        record_range = min(self.memory.buffer_counter, self.memory.buffer_capacity)
+        batch_indices = np.random.choice(record_range, self.memory.batch_size)
 
-        state_batch = T.tensor(self.mem.state_buffer[batch_indices], dtype=T.float32).to(device)
-        action_batch = T.tensor(self.mem.action_buffer[batch_indices], dtype=T.float32).to(device)
-        reward_batch = T.tensor(self.mem.reward_buffer[batch_indices], dtype=T.float32).to(device)
-        next_state_batch = T.tensor(self.mem.next_state_buffer[batch_indices], dtype=T.float32).to(device)
+        state_batch = T.tensor(self.memory.state_buffer[batch_indices], dtype=T.float32).to(device)
+        action_batch = T.tensor(self.memory.action_buffer[batch_indices], dtype=T.float32).to(device)
+        reward_batch = T.tensor(self.memory.reward_buffer[batch_indices], dtype=T.float32).to(device)
+        next_state_batch = T.tensor(self.memory.next_state_buffer[batch_indices], dtype=T.float32).to(device)
 
         self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
@@ -139,6 +139,10 @@ class Agent:
         legal_action = np.clip(action.numpy(), self.action_low, self.action_high)
         return (legal_action)
     
+    def remember(self, state, action, reward, new_state, done):
+        # guardar acoes e consequencias no buffer de memoria
+        self.memory.store_transition(state, action, reward, new_state, done)
+
     def update_target(self):
         for target_param, param in zip(self.target_actor.parameters(), self.actor.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)

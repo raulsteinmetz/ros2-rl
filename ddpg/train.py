@@ -280,7 +280,7 @@ class RobotControllerNode(Node):
                 reward, done = self.get_reward(turtle_x, turtle_y, target_x, target_y, lidar32, max_steps_per_episode, step, cmd_vel_msg.angular.z)
 
                 self.last_distance = new_distance
-
+                
                 agent.mem.record((state, action, reward, state_))
                 state = state_
                 acum_reward += reward
