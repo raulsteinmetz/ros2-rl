@@ -1,4 +1,7 @@
 import numpy as np
+import tensorflow as T
+
+device = get_gpu()
 
 
 class Buffer:
@@ -30,3 +33,14 @@ class Buffer:
         self.next_state_buffer[index] = obs_tuple[3]
 
         self.buffer_counter += 1
+
+    def sample_buffer(self, batch_size):
+        record_range = min(self.buffer_counter, self.buffer_capacity)
+        batch_indices = np.random.choice(record_range, self.batch_size)
+
+        state = T.tensor(self.state_buffer[batch_indices], dtype= T.float32).to(device)
+        action = T.tensor(self.action_buffer[batch_indices], dtype= T.float32).to(device)
+        reward = T.tensor(self.reward_buffer[batch_indices], dtype=T.float32).to(device)
+        next_state = T.tensor(self.next_state_buffer[batch_indices], dtype= T.float32).to(device)
+
+        return state, action, reward, next_state

@@ -117,13 +117,11 @@ class Agent:
         self.actor_optimizer.step()
 
     def learn(self):
-        record_range = min(self.memory.buffer_counter, self.memory.buffer_capacity)
-        batch_indices = np.random.choice(record_range, self.memory.batch_size)
+        if self.memory.mem_cntr < self.batch_size:
+            return
 
-        state_batch = T.tensor(self.memory.state_buffer[batch_indices], dtype=T.float32).to(device)
-        action_batch = T.tensor(self.memory.action_buffer[batch_indices], dtype=T.float32).to(device)
-        reward_batch = T.tensor(self.memory.reward_buffer[batch_indices], dtype=T.float32).to(device)
-        next_state_batch = T.tensor(self.memory.next_state_buffer[batch_indices], dtype=T.float32).to(device)
+        state_batch, action_batch, reward_batch, next_state_batch = \
+                self.memory.sample_buffer(self.batch_size)
 
         self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
