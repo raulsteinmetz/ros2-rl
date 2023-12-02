@@ -41,19 +41,22 @@ class ReplayBuffer():
 
 class CriticNetwork(nn.Module):
     def __init__(self, beta, input_dims, fc1_dims, fc2_dims, n_actions,
-            name, chkpt_dir='tmp/td3'):
+                 n_atoms, v_min, v_max, name, chkpt_dir='tmp/d4pg'):
         super(CriticNetwork, self).__init__()
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
+        self.n_atoms = n_atoms  # number of distribtuion bins
+        self.v_min = v_min      # min distribution value
+        self.v_max = v_max      # max distribution value
         self.name = name
         self.checkpoint_dir = chkpt_dir
-        self.checkpoint_file = os.path.join(self.checkpoint_dir, name+'_td3')
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, name+'_d4pg')
 
         self.fc1 = nn.Linear(self.input_dims + n_actions, self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
-        self.q1 = nn.Linear(self.fc2_dims, 1)
+        self.q = nn.Linear(self.fc2_dims, self.n_atoms)
 
         self.optimizer = optim.Adam(self.parameters(), lr=beta)
         # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -61,14 +64,14 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action):
-        q1_action_value = self.fc1(T.cat([state, action], dim=1))
-        q1_action_value = F.relu(q1_action_value)
-        q1_action_value = self.fc2(q1_action_value)
-        q1_action_value = F.relu(q1_action_value)
+        x = F.relu(self.fc1(T.cat([state, action], dim=1)))
+        x = F.relu(self.fc2(x))
+        q_values = self.q(x)
 
-        q1 = self.q1(q1_action_value)
+        # Applying softmax to q_values to get a probability distribution
+        q_values = F.softmax(q_values, dim=1)
 
-        return q1
+        return q_values
 
     def save_checkpoint(self):
         print('... saving checkpoint ...')
@@ -121,12 +124,15 @@ class ActorNetwork(nn.Module):
 
 
 class Agent():
-    def __init__(self, alpha, beta, input_dims, tau, max_action, min_action,
-            gamma=0.99, update_actor_interval=2, warmup=1000,
-            n_actions=2, max_size=50000, layer1_size=400,
-            layer2_size=300, batch_size=100, noise=0.1):
+    def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
+                 max_action, min_action, gamma=0.99, update_actor_interval=2,
+                 warmup=1000, n_actions=2, max_size=50000, layer1_size=400,
+                 layer2_size=300, batch_size=100, noise=0.1):
         self.gamma = gamma
         self.tau = tau
+        self.n_atoms = n_atoms
+        self.v_min = v_min
+        self.v_max = v_max
         self.max_action = max_action
         self.min_action = min_action
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
@@ -179,42 +185,25 @@ class Agent():
         state, action, reward, new_state, done = \
                 self.memory.sample_buffer(self.batch_size)
 
-        reward = T.tensor(reward, dtype=T.float).to(self.critic_1.device)
-        done = T.tensor(done).to(self.critic_1.device)
-        state_ = T.tensor(new_state, dtype=T.float).to(self.critic_1.device)
-        state = T.tensor(state, dtype=T.float).to(self.critic_1.device)
-        action = T.tensor(action, dtype=T.float).to(self.critic_1.device)
+        state_batch = T.tensor(state, dtype=T.float).to(self.critic_1.device)
+        new_state_batch = T.tensor(new_state, dtype=T.float).to(self.critic_1.device)
+        action_batch = T.tensor(action, dtype=T.float).to(self.critic_1.device)
+        reward_batch = T.tensor(reward, dtype=T.float).to(self.critic_1.device)
+        done_batch = T.tensor(done).to(self.critic_1.device)
         
-        target_actions = self.target_actor.forward(state_)
-        target_actions = target_actions + \
-                T.clamp(T.tensor(np.random.normal(scale=0.2)), -0.5, 0.5)
-        target_actions = T.clamp(target_actions, self.min_action, 
-                                self.max_action)
-        
-        q1_ = self.target_critic_1.forward(state_, target_actions)
-        q2_ = self.target_critic_2.forward(state_, target_actions)
+        with T.no_grad():
+            target_actions = self.target_actor.forward(new_state_batch)
+            q1_ = self.target_critic_1.forward(new_state_batch, target_actions)
+            q2_ = self.target_critic_2.forward(new_state_batch, target_actions)
+            q_target = T.min(q1_, q2_)
+            projected_dist = self.project_distribution(q_target, reward_batch, done_batch)
 
-        q1 = self.critic_1.forward(state, action)
-        q2 = self.critic_2.forward(state, action)
-
-        q1_[done] = 0.0
-        q2_[done] = 0.0
-
-        q1_ = q1_.view(-1)
-        q2_ = q2_.view(-1)
-
-        critic_value_ = T.min(q1_, q2_)
-
-        target = reward + self.gamma*critic_value_
-        target = target.view(self.batch_size, 1)
+        q_pred = self.critic_1.forward(state_batch, action_batch)
+        loss = F.mse_loss(q_pred, projected_dist)
 
         self.critic_1.optimizer.zero_grad()
         self.critic_2.optimizer.zero_grad()
-
-        q1_loss = F.mse_loss(target, q1)
-        q2_loss = F.mse_loss(target, q2)
-        critic_loss = q1_loss + q2_loss
-        critic_loss.backward()
+        loss.backward()
         self.critic_1.optimizer.step()
         self.critic_2.optimizer.step()
 
@@ -264,6 +253,34 @@ class Agent():
         self.target_critic_1.load_state_dict(critic_1)
         self.target_critic_2.load_state_dict(critic_2)
         self.target_actor.load_state_dict(actor)
+
+    def project_distribtuion(self, q_target, rewards, dones):
+        batch_size = rewards.size(0)
+        deltas = (self.v_max - self.v_min) / (self.n_atoms - 1)
+        atoms = T.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
+
+        projected_distributions = T.zeros(batch_size, self.n_atoms).to(self.device)
+
+        for i in range(batch_size):
+            distribution = T.zeros(self.n_atoms).to(self.device)
+            for j in range(self.n_atoms):
+                atom_value = rewards[i] + (self.gamma ** (1 - dones[i])) * atoms[j]
+                atom_value = T.clamp(atom_value, self.v_min, self.v_max)
+                index = (atom_value - self.v_min) / deltas
+                lower = index.floor().long()
+                upper = index.ceil().long()
+
+                lower_contrib = ((upper.float() - index) * q_target[i, j] if lower >= 0 else 0)
+                upper_contrib = ((index - lower.float()) * q_target[i, j] if upper < self.n_atoms else 0)
+
+                if lower >= 0 and lower < self.n_atoms:
+                    distribution[lower] += lower_contrib
+                if upper >= 0 and upper < self.n_atoms:
+                    distribution[upper] += upper_contrib
+
+            projected_distributions[i] = distribution
+        
+        return projected_distributions
 
     def save_models(self):
         self.actor.save_checkpoint()
