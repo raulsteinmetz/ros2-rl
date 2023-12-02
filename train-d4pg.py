@@ -7,6 +7,7 @@ def main(args=None):
     rclpy.init(args=args)
     trainer = Trainer()
     agent = Agent(alpha=0.001,
+                  beta=0.001,
                   input_dims=trainer.env.num_states,
                   tau=0.005,
                   n_atoms=51,

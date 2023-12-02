@@ -64,7 +64,9 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action):
-        x = F.relu(self.fc1(T.cat([state, action], dim=1)))
+        state_action = F.relu(self.fc1(T.cat([state, action], dim=1)))
+        state_action = state_action.to(self.device)
+        x = F.relu(self.fc1(state_action))
         x = F.relu(self.fc2(x))
         q_values = self.q(x)
 
@@ -105,7 +107,8 @@ class ActorNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state):
-        prob = self.fc1(state)
+        state_tensor = T.tensor(state, dtype=T.float32) if isinstance(state, np.ndarray) else state
+        prob = self.fc1(state_tensor)
         prob = F.relu(prob)
         prob = self.fc2(prob)
         prob = F.relu(prob)
@@ -164,6 +167,7 @@ class Agent():
 
         self.noise = noise
         self.update_network_parameters(tau=1)
+        self.device = T.device('cuda:0')
 
     def choose_action(self, observation):
         if self.time_step < self.warmup:
@@ -258,7 +262,7 @@ class Agent():
         self.target_critic_2.load_state_dict(critic_2)
         self.target_actor.load_state_dict(actor)
 
-    def project_distribtuion(self, q_target, rewards, dones):
+    def project_distribution(self, q_target, rewards, dones):
         batch_size = rewards.size(0)
         deltas = (self.v_max - self.v_min) / (self.n_atoms - 1)
         atoms = T.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
@@ -268,7 +272,7 @@ class Agent():
         for i in range(batch_size):
             distribution = T.zeros(self.n_atoms).to(self.device)
             for j in range(self.n_atoms):
-                atom_value = rewards[i] + (self.gamma ** (1 - dones[i])) * atoms[j]
+                atom_value = rewards[i] + (self.gamma ** (1 - dones[i].float())) * atoms[j]
                 atom_value = T.clamp(atom_value, self.v_min, self.v_max)
                 index = (atom_value - self.v_min) / deltas
                 lower = index.floor().long()
