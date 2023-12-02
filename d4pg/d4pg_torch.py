@@ -144,19 +144,23 @@ class Agent():
         self.update_actor_iter = update_actor_interval
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size,
-                        layer2_size, n_actions=n_actions, name='actor')
+                                  layer2_size, n_actions=n_actions, name='actor')
 
         self.critic_1 = CriticNetwork(beta, input_dims, layer1_size,
-                        layer2_size, n_actions=n_actions, name='critic_1')
+                                      layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
+                                      v_min=v_min, v_max=v_max, name='critic_1')
         self.critic_2 = CriticNetwork(beta, input_dims, layer1_size,
-                        layer2_size, n_actions=n_actions, name='critic_2')
+                                      layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
+                                      v_min=v_min, v_max=v_max, name='critic_2')
 
         self.target_actor = ActorNetwork(alpha, input_dims, layer1_size,
-                    layer2_size, n_actions=n_actions, name='target_actor')
+                                         layer2_size, n_actions=n_actions, name='target_actor')
         self.target_critic_1 = CriticNetwork(beta, input_dims, layer1_size,
-                layer2_size, n_actions=n_actions, name='target_critic_1')
+                                             layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
+                                             v_min=v_min, v_max=v_max, name='target_critic_1')
         self.target_critic_2 = CriticNetwork(beta, input_dims, layer1_size,
-                layer2_size, n_actions=n_actions, name='target_critic_2')
+                                             layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
+                                             v_min=v_min, v_max=v_max, name='target_critic_2')
 
         self.noise = noise
         self.update_network_parameters(tau=1)
