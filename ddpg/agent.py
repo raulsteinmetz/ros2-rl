@@ -127,6 +127,7 @@ class Agent:
         state_batch, action_batch, reward_batch, next_state_batch = \
                 self.memory.sample_buffer(self.batch_size)
 
+        self.optimize(state_batch, action_batch, reward_batch, next_state_batch)
         self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
     def policy(self, state, add_noise=True):
@@ -165,8 +166,28 @@ class Agent:
         for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-    def optimize():
-        ...
+    def optimize(self, state_batch, action_batch, reward_batch, next_state_batch):
+        # Update critic network
+        self.critic_optimizer.zero_grad()
+        with T.no_grad():
+            target_actions = self.target_actor(next_state_batch)
+            target_values = self.target_critic(next_state_batch, target_actions)
+            y = reward_batch + self.gamma * target_values
+        critic_value = self.critic(state_batch, action_batch)
+        critic_loss = F.mse_loss(critic_value, y)
+        critic_loss.backward()
+        self.critic_optimizer.step()
+
+        # Update the actor network
+        self.actor_optimizer.zero_grad()
+        actions = self.actor(state_batch)
+        critic_value = self.critic(state_batch, actions)
+        actor_loss = -T.mean(critic_value)
+        actor_loss.backward()
+        self.actor_optimizer.step()
+
+        # Atualizando as redes-alvo
+        self.update_target()
 
     # Save and load model weights
     def try_load_model_weights(self, model, file_path):
