@@ -20,7 +20,11 @@ def main(args=None):
                   layer2_size=256,
                   n_actions=trainer.env.num_actions,
                   )
-    trainer.train(agent, 5000, 140, False, 1)
+    trainer.train(agent=agent, 
+                  episodes=5000, 
+                  max_steps=140, 
+                  load_models=False, 
+                  stage=1)
     trainer.kill_env()
     rclpy.shutdown()
 
