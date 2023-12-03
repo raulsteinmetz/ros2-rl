@@ -64,8 +64,8 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action):
-        state = T.tensor(state, dtype=T.float).to(self.device)
-        action = T.tensor(action, dtype=T.float).to(self.device)
+        state = T.tensor(state, dtype=T.float).to(self.device) if isinstance(state, np.ndarray) else state
+        action = T.tensor(action, dtype=T.float).to(self.device) if isinstance(action, np.ndarray) else action
         state_action = T.cat([state, action], dim=1)
         x = F.relu(self.fc1(state_action))
         x = F.relu(self.fc2(x))
@@ -145,7 +145,7 @@ class Agent():
         self.time_step = 0
         self.warmup = warmup
         self.n_actions = n_actions
-        self.update_actor_iter = update_actor_interval
+        self.update_actor_interval = update_actor_interval
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size,
                                   layer2_size, n_actions=n_actions, name='actor')
@@ -218,7 +218,7 @@ class Agent():
 
         self.learn_step_cntr += 1
 
-        if self.learn_step_cntr % self.update_actor_iter != 0:
+        if self.learn_step_cntr % self.update_actor_interval != 0:
             return
 
         self.actor.optimizer.zero_grad()
@@ -271,24 +271,26 @@ class Agent():
         projected_distributions = T.zeros(batch_size, self.n_atoms).to(self.device)
         gamma_term = self.gamma ** (1 - dones.float()).unsqueeze(1)
 
-        for i in range(batch_size):
-            distribution = T.zeros(self.n_atoms).to(self.device)
-            atom_values = rewards[i] + gamma_term[i] * atoms
-            atom_values = T.clamp(atom_values, self.v_min, self.v_max)
-            index = (atom_values - self.v_min) / deltas
-            lower = index.floor().long()
-            upper = index.ceil().long()
+        atom_values = rewards.unsqueeze(1) + gamma_term * atoms
+        atom_values = T.clamp(atom_values, self.v_min, self.v_max)
+        index = (atom_values - self.v_min) / deltas
+        lower = index.floor().long()
+        upper = index.ceil().long()
 
-            lower_mask = (lower >= 0) & (lower < self.n_atoms)
-            upper_mask = (upper >= 0) & (upper < self.n_atoms)
-            lower_contrib = (upper.float() - index) * q_target[i]
-            upper_contrib = (index - lower.float()) * q_target[i]
+        q_target_expanded = q_target.unsqueeze(1).expand(-1, self.n_atoms, -1)
 
-            distribution[lower[lower_mask]] += lower_contrib[lower_mask]
-            distribution[upper[upper_mask]] += upper_contrib[upper_mask]
+        lower_contrib = (upper.float() - index).unsqueeze(2) * q_target_expanded
+        upper_contrib = (index - lower.float()).unsqueeze(2)  * q_target_expanded
 
-            projected_distributions[i] = distribution
-        print(projected_distributions)
+        lower_index_mask = T.zeros(batch_size, self.n_atoms, self.n_atoms, dtype=T.bool).to(self.device)
+        upper_index_mask = T.zeros_like(lower_index_mask).to(self.device)
+
+        lower_index_mask.scatter_(1, lower.unsqueeze(1), True)
+        upper_index_mask.scatter_(1, upper.unsqueeze(1), True)
+
+        projected_distributions += T.sum(lower_contrib * lower_index_mask, dim=2)
+        projected_distributions += T.sum(upper_contrib * upper_index_mask, dim=2)
+
         return projected_distributions
 
     def save_models(self):
