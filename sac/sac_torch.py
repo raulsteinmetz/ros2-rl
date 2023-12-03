@@ -133,5 +133,5 @@ class Agent():
 
         self.update_network_parameters()
 
-        return critic_1_loss.item()
+        return critic_1_loss
         

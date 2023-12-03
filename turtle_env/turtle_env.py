@@ -2,6 +2,7 @@ import rclpy
 import random
 import math
 import numpy as np
+import torch as T
 from time import sleep
 from os import system
 from datetime import datetime
@@ -282,11 +283,15 @@ class Trainer():
                 acum_reward += reward
 
                 loss = agent.learn()
-
-                # Use this SummaryWriter, to verify each step's reward for more control over the loss
-                # if loss is not None:
-                #     self.writer.add_scalar('Loss', loss, episode * max_steps + step)
-                # self.writer.add_scalar('Acumulated Reward', acum_reward, episode * max_steps + step)
+                if loss is not None:
+                    if isinstance(loss, T.Tensor):
+                        loss_scalar = loss.item()
+                    elif isinstance(loss, float):
+                        loss_scalar = loss
+                    else:
+                        print(f"Type of Loss couldn't be recognized {type(loss)}")
+                    # Use this SummaryWriter, to verify each step's reward for more control over the loss
+                    self.writer.add_scalar('Loss', loss_scalar, episode * max_steps + step) 
 
                 step += 1
 

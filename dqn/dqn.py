@@ -110,7 +110,7 @@ class Agent:
         self.epsilon = self.epsilon - self.eps_dec \
             if self.epsilon > self.eps_min else self.eps_min
         
-        return loss.item()
+        return loss
         
     def save_models(self):
         T.save(self.Q_eval.state_dict(), './tmp/dqn/model.pt')

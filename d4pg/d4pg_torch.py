@@ -58,7 +58,7 @@ class CriticNetwork(nn.Module):
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.q = nn.Linear(self.fc2_dims, self.n_atoms)
 
-        self.optimizer = optim.Adam(self.parameters(), lr=beta)
+        self.optimizer = optim.Adam(self.parameters(), lr=beta, weight_decay=1e-5)
         # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.device = T.device('cuda:0')
         self.to(self.device)
@@ -102,7 +102,7 @@ class ActorNetwork(nn.Module):
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.mu = nn.Linear(self.fc2_dims, self.n_actions)
 
-        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.optimizer = optim.Adam(self.parameters(), lr=alpha, weight_decay=1e-5)
         # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.device = T.device('cuda:0')
         self.to(self.device)
@@ -188,6 +188,7 @@ class Agent():
 
         mu_prime = T.clamp(mu_prime, self.min_action, self.max_action)
         self.noise *= self.noise_decay
+        print(f"self.noise: {self.noise}, self.noise_decay = {self.noise_decay}")
         self.time_step += 1
 
         return mu_prime.cpu().detach().numpy()
@@ -221,6 +222,11 @@ class Agent():
         self.critic_1.optimizer.zero_grad()
         self.critic_2.optimizer.zero_grad()
         loss.backward()
+
+        # Clipping the critic gradients
+        T.nn.utils.clip_grad_norm_(self.critic_1.parameters(), 1)
+        T.nn.utils.clip_grad_norm_(self.critic_2.parameters(), 1)
+
         self.critic_1.optimizer.step()
         self.critic_2.optimizer.step()
 
@@ -233,10 +239,14 @@ class Agent():
         actor_q1_loss = self.critic_1.forward(state, self.actor.forward(state))
         actor_loss = -T.mean(actor_q1_loss)
         actor_loss.backward()
+
+        # Clipping the actor gradient
+        T.nn.utils.clip_grad_norm_(self.actor.parameters(), 1)
+
         self.actor.optimizer.step()
 
         self.update_network_parameters()
-        return loss.item()
+        return loss
 
     def update_network_parameters(self, tau=None):
         if tau is None:
