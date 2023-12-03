@@ -316,8 +316,9 @@ class Trainer():
                 agent.save_models()
 
             if episode % 50 == 0:
+                # Writes to tensorboard
                 self.writer.add_scalar('Acumulated Reward each 50 episodes', acum_reward, episode)
-                self.writer.add_scalar('Moving Average Reward each 50 episodes', acum_reward, mov_avg_rwds)
+                self.writer.add_scalar('Moving Average Reward each 50 episodes', mov_avg_rwds[-1], episode)
                 # Plot raw rewards and moving average
                 plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
                 plt.plot(mov_avg_rwds, color='red', label="Moving Avg Reward" if episode == 0 else "")
