@@ -283,14 +283,20 @@ class Trainer():
 
                 loss = agent.learn()
 
-                if loss is not None:
-                    self.writer.add_scalar('Loss', loss, episode * max_steps + step)
-                self.writer.add_scalar('Acumulated Reward', acum_reward, episode * max_steps + step)
+                # Use this SummaryWriter, to verify each step's reward for more control over the loss
+                # if loss is not None:
+                #     self.writer.add_scalar('Loss', loss, episode * max_steps + step)
+                # self.writer.add_scalar('Acumulated Reward', acum_reward, episode * max_steps + step)
 
                 step += 1
 
             print("Episode * {} * Acumulated Reward is ==> {}".format(episode, acum_reward))
             acum_rwds.append(acum_reward)
+
+            # Use this SummaryWriter, to verify each episode
+            if loss is not None:
+                self.writer.add_scalar('Loss', loss, episode)
+            self.writer.add_scalar('Acumulated Reward', acum_reward, episode)
 
              # Compute moving average
             if episode >= N-1:
