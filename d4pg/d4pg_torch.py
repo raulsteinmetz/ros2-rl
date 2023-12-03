@@ -67,8 +67,8 @@ class CriticNetwork(nn.Module):
         state = T.tensor(state, dtype=T.float).to(self.device) if isinstance(state, np.ndarray) else state
         action = T.tensor(action, dtype=T.float).to(self.device) if isinstance(action, np.ndarray) else action
         state_action = T.cat([state, action], dim=1)
-        x = F.relu(self.fc1(state_action))
-        x = F.relu(self.fc2(x))
+        x = F.leaky_relu(self.fc1(state_action), negative_slope=0.01)
+        x = F.leaky_relu(self.fc2(x), negative_slope=0.01)
         q_values = self.q(x)
 
         # Applying softmax to q_values to get a probability distribution
@@ -110,11 +110,12 @@ class ActorNetwork(nn.Module):
     def forward(self, state):
         state_tensor = T.tensor(state, dtype=T.float32).to(self.device) if isinstance(state, np.ndarray) else state
         prob = self.fc1(state_tensor)
-        prob = F.relu(prob)
+        prob = F.leaky_relu(prob, negative_slope=0.01)
         prob = self.fc2(prob)
-        prob = F.relu(prob)
+        prob = F.leaky_relu(prob, negative_slope=0.01)
 
-        mu = T.tanh(self.mu(prob))
+        # mu = T.tanh(self.mu(prob))
+        mu = F.hardtan(self.mu(prob), self.min_action, self.max_action)
 
         return mu
 
@@ -166,6 +167,7 @@ class Agent():
                                              layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
                                              v_min=v_min, v_max=v_max, name='target_critic_2')
 
+        self.noise_decay = 0.9995
         self.noise = noise
         self.update_network_parameters(tau=1)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -181,6 +183,7 @@ class Agent():
                                     dtype=T.float).to(self.actor.device)
 
         mu_prime = T.clamp(mu_prime, self.min_action, self.max_action)
+        self.noise *= self.noise_decay
         self.time_step += 1
 
         return mu_prime.cpu().detach().numpy()
@@ -204,7 +207,8 @@ class Agent():
             target_actions = self.target_actor.forward(new_state_batch)
             q1_ = self.target_critic_1.forward(new_state_batch, target_actions)
             q2_ = self.target_critic_2.forward(new_state_batch, target_actions)
-            q_target = T.min(q1_, q2_)
+            # q_target = T.min(q1_, q2_)
+            q_target = (q1_ + q2_) / 2.0
             projected_dist = self.project_distribution(q_target, reward_batch, done_batch)
 
         q_pred = self.critic_1.forward(state_batch, action_batch)
