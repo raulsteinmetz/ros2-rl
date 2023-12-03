@@ -132,4 +132,6 @@ class Agent():
         self.critic_2.optimizer.step()
 
         self.update_network_parameters()
+
+        return critic_1_loss.item()
         

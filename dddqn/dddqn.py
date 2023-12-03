@@ -168,3 +168,4 @@ class Agent():
         self.learn_step_counter += 1
 
         self.decrement_epsilon()
+        return loss.item()

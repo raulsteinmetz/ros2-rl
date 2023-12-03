@@ -230,6 +230,7 @@ class Agent():
         self.actor.optimizer.step()
 
         self.update_network_parameters()
+        return actor_loss.item()
 
     def update_network_parameters(self, tau=None):
         if tau is None:
