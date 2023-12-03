@@ -86,12 +86,14 @@ class CriticNetwork(nn.Module):
 
 class ActorNetwork(nn.Module):
     def __init__(self, alpha, input_dims, fc1_dims, fc2_dims,
-            n_actions, name, chkpt_dir='tmp/d4pg'):
+            n_actions, name, min_action, max_action, chkpt_dir='tmp/d4pg'):
         super(ActorNetwork, self).__init__()
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
+        self.min_action = min_action
+        self.max_action = max_action
         self.name = name
         self.checkpoint_dir = chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name+'_d4pg')
@@ -115,7 +117,7 @@ class ActorNetwork(nn.Module):
         prob = F.leaky_relu(prob, negative_slope=0.01)
 
         # mu = T.tanh(self.mu(prob))
-        mu = F.hardtan(self.mu(prob), self.min_action, self.max_action)
+        mu = F.hardtanh(self.mu(prob), self.min_action, self.max_action)
 
         return mu
 
@@ -149,7 +151,8 @@ class Agent():
         self.update_actor_interval = update_actor_interval
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size,
-                                  layer2_size, n_actions=n_actions, name='actor')
+                                  layer2_size, n_actions=n_actions, name='actor', 
+                                  min_action=min_action, max_action=max_action)
 
         self.critic_1 = CriticNetwork(beta, input_dims, layer1_size,
                                       layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
@@ -159,7 +162,8 @@ class Agent():
                                       v_min=v_min, v_max=v_max, name='critic_2')
 
         self.target_actor = ActorNetwork(alpha, input_dims, layer1_size,
-                                         layer2_size, n_actions=n_actions, name='target_actor')
+                                         layer2_size, n_actions=n_actions, name='target_actor',
+                                         min_action=min_action, max_action=max_action)
         self.target_critic_1 = CriticNetwork(beta, input_dims, layer1_size,
                                              layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
                                              v_min=v_min, v_max=v_max, name='target_critic_1')
