@@ -1,4 +1,11 @@
 import rclpy
+import random
+import math
+import numpy as np
+from time import sleep
+from os import system
+from datetime import datetime
+from matplotlib import pyplot as plt
 from rclpy.node import Node
 from std_srvs.srv import Empty 
 from geometry_msgs.msg import Twist
@@ -6,13 +13,8 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
-import random
-import math
-from time import sleep
-from os import system
-import numpy as np
 from turtle_env.target import generate_target_sdf
-from matplotlib import pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
 
 
 REACH_TRESHOLD = 0.3
@@ -246,8 +248,10 @@ class Env(Node):
 
 
 class Trainer():
-    def __init__(self):
+    def __init__(self, algorithm_name='undefined'):
         self.env = Env()
+        self.algorithm_name = algorithm_name
+        self.writer = SummaryWriter(f"runs/{algorithm_name}/{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
 
     def train(self, agent, episodes, max_steps, load_models=True, stage=1, discrete=False):
         if load_models:
@@ -277,8 +281,11 @@ class Trainer():
                 state = state_
                 acum_reward += reward
 
-                agent.learn()
+                loss = agent.learn()
 
+                if loss is not None:
+                    self.writer.add_scalar('Loss', loss, episode * max_steps + step)
+                self.writer.add_scalar('Acumulated Reward', acum_reward, episode * max_steps + step)
 
                 step += 1
 
@@ -313,6 +320,7 @@ class Trainer():
 
     def kill_env(self):
         self.env.destroy_node()
+        self.writer.close()
 
 
 

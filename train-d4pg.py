@@ -5,7 +5,7 @@ from d4pg.d4pg_torch import Agent
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer()
+    trainer = Trainer('d4pg')
     agent = Agent(alpha=0.001,
                   beta=0.001,
                   input_dims=trainer.env.num_states,
