@@ -5,7 +5,7 @@ from ddpg.agent import Agent
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer()
+    trainer = Trainer('ddpg')
     num_states = 14
     num_actions = 2
 
