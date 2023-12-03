@@ -64,8 +64,9 @@ class CriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action):
-        state_action = F.relu(self.fc1(T.cat([state, action], dim=1)))
-        state_action = state_action.to(self.device)
+        state = T.tensor(state, dtype=T.float).to(self.device)
+        action = T.tensor(action, dtype=T.float).to(self.device)
+        state_action = T.cat([state, action], dim=1)
         x = F.relu(self.fc1(state_action))
         x = F.relu(self.fc2(x))
         q_values = self.q(x)
@@ -107,6 +108,7 @@ class ActorNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state):
+        state = T.tensor(state, dtype=T.float).to(self.device)
         state_tensor = T.tensor(state, dtype=T.float32) if isinstance(state, np.ndarray) else state
         prob = self.fc1(state_tensor)
         prob = F.relu(prob)
@@ -123,7 +125,7 @@ class ActorNetwork(nn.Module):
 
     def load_checkpoint(self):
         print('... loading checkpoint ...')
-        self.load_state_dict(T.load(self.checkpoint_file))
+        self.load_state_dict(T.load(self.checkpoint_file, map_location=self.device))
 
 
 class Agent():
@@ -167,7 +169,7 @@ class Agent():
 
         self.noise = noise
         self.update_network_parameters(tau=1)
-        self.device = T.device('cuda:0')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
     def choose_action(self, observation):
         if self.time_step < self.warmup:
@@ -193,11 +195,11 @@ class Agent():
         state, action, reward, new_state, done = \
                 self.memory.sample_buffer(self.batch_size)
 
-        state_batch = T.tensor(state, dtype=T.float).to(self.critic_1.device)
-        new_state_batch = T.tensor(new_state, dtype=T.float).to(self.critic_1.device)
-        action_batch = T.tensor(action, dtype=T.float).to(self.critic_1.device)
-        reward_batch = T.tensor(reward, dtype=T.float).to(self.critic_1.device)
-        done_batch = T.tensor(done).to(self.critic_1.device)
+        state_batch = T.tensor(state, dtype=T.float).to(self.device)
+        new_state_batch = T.tensor(new_state, dtype=T.float).to(self.device)
+        action_batch = T.tensor(action, dtype=T.float).to(self.device)
+        reward_batch = T.tensor(reward, dtype=T.float).to(self.device)
+        done_batch = T.tensor(done).to(self.device)
         
         with T.no_grad():
             target_actions = self.target_actor.forward(new_state_batch)
