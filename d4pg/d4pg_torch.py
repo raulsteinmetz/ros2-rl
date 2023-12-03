@@ -129,8 +129,8 @@ class ActorNetwork(nn.Module):
 
 class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
-                 max_action, min_action, gamma=0.99, update_actor_interval=2,
-                 warmup=1000, n_actions=2, max_size=50000, layer1_size=400,
+                 max_action, min_action, gamma=0.99, warmup=1000,
+                 n_actions=2, max_size=50000, layer1_size=400,
                  layer2_size=300, batch_size=100, noise=0.1):
         self.gamma = gamma
         self.tau = tau
@@ -145,7 +145,6 @@ class Agent():
         self.time_step = 0
         self.warmup = warmup
         self.n_actions = n_actions
-        self.update_actor_iter = update_actor_interval
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size,
                                   layer2_size, n_actions=n_actions, name='actor')
@@ -217,9 +216,6 @@ class Agent():
         self.critic_2.optimizer.step()
 
         self.learn_step_cntr += 1
-
-        if self.learn_step_cntr % self.update_actor_iter != 0:
-            return
 
         self.actor.optimizer.zero_grad()
         actor_q1_loss = self.critic_1.forward(state, self.actor.forward(state))
