@@ -108,8 +108,7 @@ class ActorNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state):
-        state = T.tensor(state, dtype=T.float).to(self.device)
-        state_tensor = T.tensor(state, dtype=T.float32) if isinstance(state, np.ndarray) else state
+        state_tensor = T.tensor(state, dtype=T.float32).to(self.device) if isinstance(state, np.ndarray) else state
         prob = self.fc1(state_tensor)
         prob = F.relu(prob)
         prob = self.fc2(prob)
@@ -270,26 +269,26 @@ class Agent():
         atoms = T.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
 
         projected_distributions = T.zeros(batch_size, self.n_atoms).to(self.device)
+        gamma_term = self.gamma ** (1 - dones.float()).unsqueeze(1)
 
         for i in range(batch_size):
             distribution = T.zeros(self.n_atoms).to(self.device)
-            for j in range(self.n_atoms):
-                atom_value = rewards[i] + (self.gamma ** (1 - dones[i].float())) * atoms[j]
-                atom_value = T.clamp(atom_value, self.v_min, self.v_max)
-                index = (atom_value - self.v_min) / deltas
-                lower = index.floor().long()
-                upper = index.ceil().long()
+            atom_values = rewards[i] + gamma_term[i] * atoms
+            atom_values = T.clamp(atom_values, self.v_min, self.v_max)
+            index = (atom_values - self.v_min) / deltas
+            lower = index.floor().long()
+            upper = index.ceil().long()
 
-                lower_contrib = ((upper.float() - index) * q_target[i, j] if lower >= 0 else 0)
-                upper_contrib = ((index - lower.float()) * q_target[i, j] if upper < self.n_atoms else 0)
+            lower_mask = (lower >= 0) & (lower < self.n_atoms)
+            upper_mask = (upper >= 0) & (upper < self.n_atoms)
+            lower_contrib = (upper.float() - index) * q_target[i]
+            upper_contrib = (index - lower.float()) * q_target[i]
 
-                if lower >= 0 and lower < self.n_atoms:
-                    distribution[lower] += lower_contrib
-                if upper >= 0 and upper < self.n_atoms:
-                    distribution[upper] += upper_contrib
+            distribution[lower[lower_mask]] += lower_contrib[lower_mask]
+            distribution[upper[upper_mask]] += upper_contrib[upper_mask]
 
             projected_distributions[i] = distribution
-        
+        print(projected_distributions)
         return projected_distributions
 
     def save_models(self):
