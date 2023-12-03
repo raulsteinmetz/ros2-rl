@@ -66,8 +66,6 @@ class CriticNetwork(nn.Module):
     def forward(self, state, action):
         state = T.tensor(state, dtype=T.float).to(self.device) if isinstance(state, np.ndarray) else state
         action = T.tensor(action, dtype=T.float).to(self.device) if isinstance(action, np.ndarray) else action
-        state = T.tensor(state, dtype=T.float).to(self.device) if isinstance(state, np.ndarray) else state
-        action = T.tensor(action, dtype=T.float).to(self.device) if isinstance(action, np.ndarray) else action
         state_action = T.cat([state, action], dim=1)
         x = F.relu(self.fc1(state_action))
         x = F.relu(self.fc2(x))
@@ -131,8 +129,8 @@ class ActorNetwork(nn.Module):
 
 class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
-                 max_action, min_action, gamma=0.99, warmup=1000,
-                 n_actions=2, max_size=50000, layer1_size=400,
+                 max_action, min_action, gamma=0.99, update_actor_interval=2,
+                 warmup=1000, n_actions=2, max_size=50000, layer1_size=400,
                  layer2_size=300, batch_size=100, noise=0.1):
         self.gamma = gamma
         self.tau = tau
@@ -147,7 +145,7 @@ class Agent():
         self.time_step = 0
         self.warmup = warmup
         self.n_actions = n_actions
-        self.update_actor_iter = update_actor_interval
+        self.update_actor_interval = update_actor_interval
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size,
                                   layer2_size, n_actions=n_actions, name='actor')
@@ -220,7 +218,7 @@ class Agent():
 
         self.learn_step_cntr += 1
 
-        if self.learn_step_cntr % self.update_actor_iter != 0:
+        if self.learn_step_cntr % self.update_actor_interval != 0:
             return
 
         self.actor.optimizer.zero_grad()
