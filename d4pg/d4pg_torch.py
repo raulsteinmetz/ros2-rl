@@ -5,6 +5,30 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 
+class OUActionNoise:
+    def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
+        self.theta = theta
+        self.mean = mean
+        self.std_dev = std_deviation
+        self.dt = dt
+        self.x_initial = x_initial
+        self.reset()
+
+    def reset(self):
+        if self.x_initial is not None:
+            self.x_prev = self.x_initial
+        else:
+            self.x_prev = np.zeros_like(self.mean)
+
+    def __call__(self):
+        x = (
+            self.x_prev
+            + self.theta * (self.mean - self.x_prev) * self.dt
+            + np.sqrt(self.dt) * self.std_dev * np.random.normal(size=self.mean.shape)
+        )
+        self.x_prev = x
+        return x
+
 class ReplayBuffer():
     def __init__(self, max_size, input_shape, n_actions):
         self.mem_size = max_size
@@ -134,7 +158,7 @@ class ActorNetwork(nn.Module):
 class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
                  max_action, min_action, gamma=0.99, update_actor_interval=2,
-                 warmup=1000, n_actions=2, max_size=500000, layer1_size=256,
+                 warmup=5000, n_actions=2, max_size=500000, layer1_size=256,
                  layer2_size=256, batch_size=100, noise=0.1, noise_base=0.02):
         self.gamma = gamma
         self.tau = tau
@@ -172,8 +196,8 @@ class Agent():
                                              layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
                                              v_min=v_min, v_max=v_max, name='target_critic_2')
 
-        # self.noise_decay = 0.995
-        self.noise = noise
+        self.noise_process = OUNoise(self.n_actions)
+        self.noise_decay_parameter = 1.0
         self.noise_base = noise_base
         self.update_network_parameters(tau=1)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -230,6 +254,9 @@ class Agent():
         self.critic_2.optimizer.step()
 
         self.learn_step_cntr += 1
+
+        if self.learn_step_cntr % self.update_actor_interval != 0:
+            return
 
         self.actor.optimizer.zero_grad()
         actor_q1_loss = self.critic_1.forward(state, self.actor.forward(state))
