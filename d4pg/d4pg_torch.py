@@ -207,25 +207,16 @@ class Agent():
 
     def choose_action(self, observation):
         if self.time_step < self.warmup:
-            # Durante o warmup, escolha uma ação aleatória
             action = np.random.uniform(low=self.min_action, high=self.max_action, size=(self.n_actions,))
         else:
-            # Use a política com um ruído constante para exploração
             state = T.tensor(observation, dtype=T.float).to(self.actor.device)
             mu = self.actor.forward(state).to(self.actor.device)
             noise = self.noise() * self.fixed_noise_scale
             print(f"self.noise: {noise}")
 
-            # Com probabilidade epsilon, escolha uma ação aleatória para explorar
-            if np.random.rand() > self.epsilon:
-                action = np.random.uniform(low=self.min_action, high=self.max_action, size=(self.n_actions,))
-                print(f"action: {action},  random: True")
-            else:
-                # Caso contrário, escolha a ação da política com ruído adicionado
-                action = mu.cpu().detach().numpy() + noise
-                print(f"action: {action},  random: False")
+            action = mu.cpu().detach().numpy() + noise
+            print(f"action: {action},  random: False")
 
-        # Garanta que a ação esteja dentro dos limites
         action = np.clip(action, self.min_action, self.max_action)
         print(f"final action: {action} between {self.min_action} min and {self.max_action} max")
         self.time_step += 1
