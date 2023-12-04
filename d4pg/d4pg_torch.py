@@ -112,12 +112,13 @@ class ActorNetwork(nn.Module):
     def forward(self, state):
         state_tensor = T.tensor(state, dtype=T.float32).to(self.device) if isinstance(state, np.ndarray) else state
         prob = self.fc1(state_tensor)
-        prob = F.leaky_relu(prob, negative_slope=0.01)
+        prob = F.leaky_relu(prob)
         prob = self.fc2(prob)
-        prob = F.leaky_relu(prob, negative_slope=0.01)
+        prob = F.leaky_relu(prob)
 
-        # mu = T.tanh(self.mu(prob))
-        mu = F.hardtanh(self.mu(prob), self.min_action, self.max_action)
+        mu = T.tanh(self.mu(prob))
+        # mu = F.hardtanh(self.mu(prob), self.min_action, self.max_action)
+
 
         return mu
 
@@ -133,8 +134,8 @@ class ActorNetwork(nn.Module):
 class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
                  max_action, min_action, gamma=0.99, update_actor_interval=2,
-                 warmup=500, n_actions=2, max_size=50000, layer1_size=400,
-                 layer2_size=300, batch_size=100, noise=0.1):
+                 warmup=1000, n_actions=2, max_size=500000, layer1_size=256,
+                 layer2_size=256, batch_size=100, noise=0.1, noise_base=0.02):
         self.gamma = gamma
         self.tau = tau
         self.n_atoms = n_atoms
@@ -171,8 +172,9 @@ class Agent():
                                              layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
                                              v_min=v_min, v_max=v_max, name='target_critic_2')
 
-        self.noise_decay = 0.995
+        # self.noise_decay = 0.995
         self.noise = noise
+        self.noise_base = noise_base
         self.update_network_parameters(tau=1)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
@@ -187,11 +189,8 @@ class Agent():
                                     dtype=T.float).to(self.actor.device)
 
         mu_prime = T.clamp(mu_prime, self.min_action, self.max_action)
-        self.noise *= self.noise_decay
         self.time_step += 1
-        
-        action = mu_prime.cpu().detach().numpy()
-        return action
+        return mu_prime.cpu().detach().numpy()
 
     def remember(self, state, action, reward, new_state, done):
         self.memory.store_transition(state, action, reward, new_state, done)
@@ -231,9 +230,6 @@ class Agent():
         self.critic_2.optimizer.step()
 
         self.learn_step_cntr += 1
-
-        # if self.learn_step_cntr % self.update_actor_interval != 0:
-        #     return
 
         self.actor.optimizer.zero_grad()
         actor_q1_loss = self.critic_1.forward(state, self.actor.forward(state))
