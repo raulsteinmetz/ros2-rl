@@ -133,7 +133,7 @@ class ActorNetwork(nn.Module):
 class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
                  max_action, min_action, gamma=0.99, update_actor_interval=2,
-                 warmup=1000, n_actions=2, max_size=50000, layer1_size=400,
+                 warmup=500, n_actions=2, max_size=50000, layer1_size=400,
                  layer2_size=300, batch_size=100, noise=0.1):
         self.gamma = gamma
         self.tau = tau
@@ -171,7 +171,7 @@ class Agent():
                                              layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
                                              v_min=v_min, v_max=v_max, name='target_critic_2')
 
-        self.noise_decay = 0.9995
+        self.noise_decay = 0.995
         self.noise = noise
         self.update_network_parameters(tau=1)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -188,10 +188,10 @@ class Agent():
 
         mu_prime = T.clamp(mu_prime, self.min_action, self.max_action)
         self.noise *= self.noise_decay
-        print(f"self.noise: {self.noise}, self.noise_decay = {self.noise_decay}")
         self.time_step += 1
-
-        return mu_prime.cpu().detach().numpy()
+        
+        action = mu_prime.cpu().detach().numpy()
+        return action
 
     def remember(self, state, action, reward, new_state, done):
         self.memory.store_transition(state, action, reward, new_state, done)
@@ -232,8 +232,8 @@ class Agent():
 
         self.learn_step_cntr += 1
 
-        if self.learn_step_cntr % self.update_actor_interval != 0:
-            return
+        # if self.learn_step_cntr % self.update_actor_interval != 0:
+        #     return
 
         self.actor.optimizer.zero_grad()
         actor_q1_loss = self.critic_1.forward(state, self.actor.forward(state))
