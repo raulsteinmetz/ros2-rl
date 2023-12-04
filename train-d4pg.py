@@ -22,7 +22,7 @@ def main(args=None):
                   )
     trainer.train(agent=agent, 
                   episodes=5000, 
-                  max_steps=140, 
+                  max_steps=300, 
                   load_models=False, 
                   stage=1)
     trainer.kill_env()
