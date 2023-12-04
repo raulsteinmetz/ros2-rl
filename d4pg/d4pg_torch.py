@@ -5,6 +5,22 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 
+class OUNoise:
+    def __init__(self, action_space_size, mu=0, theta=0.15, sigma=0.2):
+        self.mu = mu * np.ones(action_space_size)
+        self.theta = theta
+        self.sigma = sigma
+        self.state = np.copy(self.mu)
+
+    def reset(self):
+        self.state = np.copy(self.mu)
+
+    def noise(self):
+        x = self.state
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
+        self.state = x + dx
+        return self.state
+
 class ReplayBuffer():
     def __init__(self, max_size, input_shape, n_actions):
         self.mem_size = max_size
@@ -134,7 +150,7 @@ class ActorNetwork(nn.Module):
 class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
                  max_action, min_action, gamma=0.99, update_actor_interval=2,
-                 warmup=1000, n_actions=2, max_size=500000, layer1_size=256,
+                 warmup=5000, n_actions=2, max_size=500000, layer1_size=256,
                  layer2_size=256, batch_size=100, noise=0.1, noise_base=0.02):
         self.gamma = gamma
         self.tau = tau
@@ -230,6 +246,9 @@ class Agent():
         self.critic_2.optimizer.step()
 
         self.learn_step_cntr += 1
+
+        if self.learn_step_cntr % self.update_actor_interval != 0:
+            return
 
         self.actor.optimizer.zero_grad()
         actor_q1_loss = self.critic_1.forward(state, self.actor.forward(state))
