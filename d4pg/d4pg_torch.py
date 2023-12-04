@@ -159,7 +159,7 @@ class Agent():
     def __init__(self, alpha, beta, input_dims, tau, n_atoms, v_min, v_max,
                  max_action, min_action, gamma=0.99, update_actor_interval=2,
                  warmup=5000, n_actions=2, max_size=500000, layer1_size=256,
-                 layer2_size=256, batch_size=100, noise=0.1, noise_base=0.02):
+                 layer2_size=256, batch_size=100, noise=0.1):
         self.gamma = gamma
         self.tau = tau
         self.n_atoms = n_atoms
@@ -196,25 +196,36 @@ class Agent():
                                              layer2_size, n_actions=n_actions, n_atoms=n_atoms, 
                                              v_min=v_min, v_max=v_max, name='target_critic_2')
 
-        self.noise_process = OUNoise(self.n_actions)
-        self.noise_decay_parameter = 1.0
-        self.noise_base = noise_base
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.2) * np.ones(1))
+        self.noise_decay = 1.0
+        self.epsilon = 1.0  # 100% probability for exploration
+        self.epsilon_decay = 0.996
+        self.epsilon_min = 0.01
         self.update_network_parameters(tau=1)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
     def choose_action(self, observation):
         if self.time_step < self.warmup:
-            mu = T.tensor(np.random.normal(scale=self.noise, 
-                                            size=(self.n_actions,))).to(self.actor.device)
+            action = np.random.uniform(low=self.min_action, high=self.max_action, size=(self.n_actions,))
         else:
-            state = T.tensor(observation, dtype=T.float).to(self.actor.device)
-            mu = self.actor.forward(state).to(self.actor.device)
-        mu_prime = mu + T.tensor(np.random.normal(scale=self.noise),
-                                    dtype=T.float).to(self.actor.device)
+            if np.random.random() < self.epsilon:
+                # With probability epsilon, choose a random action
+                action = np.random.uniform(low=self.min_action, high=self.max_action, size=(self.n_actions,))
+            else:
+                # Otherwise, use the policy
+                state = T.tensor(observation, dtype=T.float).to(self.actor.device)
+                action = self.actor.forward(state).cpu().detach().numpy()
+                # Add noise to the action
+                noise = self.noise()
+                action = action + noise
 
-        mu_prime = T.clamp(mu_prime, self.min_action, self.max_action)
+            # Epsilon decay
+            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
+        # Action must be clipped to the action space
+        action = np.clip(action, self.min_action, self.max_action)
         self.time_step += 1
-        return mu_prime.cpu().detach().numpy()
+        return action
 
     def remember(self, state, action, reward, new_state, done):
         self.memory.store_transition(state, action, reward, new_state, done)
