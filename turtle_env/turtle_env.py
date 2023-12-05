@@ -167,7 +167,7 @@ class Env(Node):
         if stage == 1:
             self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
             self.target_y = random.uniform(-1.90, 1.90)
-        elif stage == 2:
+        elif stage == 2 or stage == 4:
             area = np.random.randint(0, 4)
             if area == 0: 
                 self.target_x = random.uniform(-1.90, -1.60)
