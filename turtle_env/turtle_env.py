@@ -14,7 +14,10 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from gazebo_msgs.srv import SpawnEntity
 from gazebo_msgs.srv import DeleteEntity
+from gazebo_msgs.srv import GetEntityState, SetEntityState
+from gazebo_msgs.msg import EntityState
 from turtle_env.target import generate_target_sdf
+from geometry_msgs.msg import Point, Quaternion
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -34,6 +37,14 @@ class Env(Node):
         self.spawn_entity_client = self.create_client(SpawnEntity, '/spawn_entity') # spawning entities in gazebo env
         self.delete_entity_client = self.create_client(DeleteEntity, '/delete_entity') # deleting entities in gazebo env
         self.reset_client = self.create_client(Empty, '/reset_simulation') # resetting simulation
+        self.get_entity_state_client = self.create_client(GetEntityState, '/demo/get_entity_state')
+        self.set_entity_state_client = self.create_client(SetEntityState, '/demo/set_entity_state')
+        self.obstacle1_x = 0.0  # Posição inicial x do obstacle1
+        self.obstacle1_y = 0.0  # Posição inicial y do obstacle1
+        self.obstacle2_x = 0.0  # Posição inicial x do obstacle2
+        self.obstacle2_y = 0.0  # Posição inicial y do obstacle2
+        self.obstacle1_direction = 1.0  # 1 para direita, -1 para esquerda
+        self.obstacle2_direction = 1.0  # 1 para cima, -1 para baixo
 
         # internal state
         self.reset_info()
@@ -43,8 +54,6 @@ class Env(Node):
         # Internal state
         self.odom_data = None
         self.scan_data = None
-
-
 
     def init_properties(self):
         self.num_states = 14
@@ -57,6 +66,48 @@ class Env(Node):
 
     def scan_callback(self, msg):
         self.scan_data = msg
+
+    def move_obstacles(self):
+        # Limites de movimento
+        x_min, x_max = -2.0, 2.0
+        y_min, y_max = -2.0, 2.0
+        movement_step = 0.05  # Quanto os obstáculos se movem a cada chamada
+
+        # Atualizar a posição do obstacle1
+        self.obstacle1_y += self.obstacle2_direction * movement_step
+        if self.obstacle1_y > y_max or self.obstacle1_y < y_min:
+            self.obstacle2_direction *= -1  # Inverte a direção
+            self.obstacle1_y += self.obstacle2_direction * movement_step
+
+        # Atualizar a posição do obstacle2
+        self.obstacle2_x += self.obstacle1_direction * movement_step
+        if self.obstacle2_x > x_max or self.obstacle2_x < x_min:
+            self.obstacle2_direction *= -1  # Inverte a direção
+            self.obstacle2_x += self.obstacle2_direction * movement_step
+
+        # Enviar solicitação para mover o obstacle1
+        self.send_obstacle_state('turtlebot3_dqn_obstacle1', self.obstacle1_x, self.obstacle1_y)
+
+        # Enviar solicitação para mover o obstacle2
+        self.send_obstacle_state('turtlebot3_dqn_obstacle2', self.obstacle2_x, self.obstacle2_y)
+
+    def send_obstacle_state(self, obstacle_name, x, y):
+        new_state = EntityState()
+        new_state.name = obstacle_name
+        new_state.pose.position.x = x
+        new_state.pose.position.y = y
+        new_state.pose.position.z = 0.0  # Supondo que z é constante
+        new_state.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)  # Sem rotação
+
+        request = SetEntityState.Request()
+        request.state = new_state
+        future = self.set_entity_state_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)
+        if future.result() is not None and future.result().success:
+            self.get_logger().info(f"{obstacle_name} moved successfully to x: {x}, y: {y}.")
+        else:
+            self.get_logger().error(f"Failed to move {obstacle_name}.")
+
 
     def get_state(self, linear_vel, angular_vel):
         # reset the environment infos, for control purposes
@@ -219,7 +270,10 @@ class Env(Node):
             pass
 
 
-    def step(self, action, step, max_steps_per_episode, discrete):
+    def step(self, action, step, max_steps_per_episode, discrete, stage):
+        if stage == 4:
+            self.move_obstacles()
+
         rclpy.spin_once(self, timeout_sec=0.5)
         if discrete == True:
             if action == 0:
@@ -249,10 +303,10 @@ class Env(Node):
 
 
 class Trainer():
-    def __init__(self, algorithm_name='undefined'):
+    def __init__(self, algorithm_name='undefined', stage='undefined'):
         self.env = Env()
         self.algorithm_name = algorithm_name
-        self.writer = SummaryWriter(f"runs/{algorithm_name}/{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
+        self.writer = SummaryWriter(f"runs/{algorithm_name}/{stage}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
 
     def train(self, agent, episodes, max_steps, load_models=True, stage=1, discrete=False):
         if load_models:
@@ -276,7 +330,7 @@ class Trainer():
 
             while not done and step < max_steps:
                 action = agent.choose_action(state)
-                reward, done, state_ = self.env.step(action, step, max_steps, discrete)
+                reward, done, state_ = self.env.step(action, step, max_steps, discrete, stage)
 
                 agent.remember(state, action, reward, state_, done)
                 state = state_
