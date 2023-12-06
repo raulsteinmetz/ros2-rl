@@ -420,7 +420,7 @@ class Trainer():
                 plt.ylabel("Acumulated Reward")
                 plt.legend()  # Add legend to the plot
                 plt.title(f'{self.algorithm_name} - Stage {stage}')
-                plt.savefig('acum_rwds.png')
+                plt.savefig(f'{self.algorithm_name}/acum_rwds_{stage}.png')
 
     def kill_env(self):
         self.env.destroy_node()
