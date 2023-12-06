@@ -12,12 +12,10 @@ from std_srvs.srv import Empty
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
-from gazebo_msgs.srv import SpawnEntity
-from gazebo_msgs.srv import DeleteEntity
-from gazebo_msgs.srv import GetEntityState, SetEntityState
 from gazebo_msgs.msg import EntityState
-from turtle_env.target import generate_target_sdf
 from geometry_msgs.msg import Point, Quaternion
+from turtle_env.target import generate_target_sdf
+from gazebo_msgs.srv import SpawnEntity, DeleteEntity, GetEntityState, SetEntityState
 from torch.utils.tensorboard import SummaryWriter
 
 
