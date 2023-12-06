@@ -75,47 +75,43 @@ class Env(Node):
             return None
 
     def move_obstacles(self):
-        # Limites de movimento
+        # Limits of moviment
         x_min, x_max = -1.5, 1.5
         y_min, y_max = -1.5, 1.5
         movement_step = 0.02
 
-        # Obtenha a posição atual dos obstáculos
+        # Obtain current position of each obstacle
         obstacle1_pos = self.get_obstacle_position('turtlebot3_dqn_obstacle1')
         obstacle2_pos = self.get_obstacle_position('turtlebot3_dqn_obstacle2')
 
         if obstacle1_pos and obstacle2_pos:
-            # Obstáculo 1 (obstacle1): Movimento vertical para cima e horizontal para a esquerda
-            if self.obstacle1_move_vertical:
-                new_y = obstacle1_pos.y + movement_step
-                if new_y > y_max:
-                    self.obstacle1_move_vertical = False
-                    new_y = y_max
-                self.send_obstacle_state('turtlebot3_dqn_obstacle1', obstacle1_pos.x, new_y)
-            else:
-                new_x = obstacle1_pos.x - movement_step
-                if new_x < x_min:
-                    self.obstacle1_move_vertical = True
-                    new_x = x_min
-                self.send_obstacle_state('turtlebot3_dqn_obstacle1', new_x, obstacle1_pos.y)
+            # Obstacle 1 moviment
+            if self.obstacle1_direction > 0:  # Movendo para cima
+                if obstacle1_pos.y >= y_max:
+                    self.obstacle1_direction = -1  # Change to move horizontally
+            else:  # Movendo para baixo ou horizontalmente
+                if obstacle1_pos.y <= y_min:
+                    self.obstacle1_direction = 1  # Change to move vertically
+                else:
+                    self.obstacle1_x += self.obstacle1_direction * movement_step  # Continue movendo horizontalmente
 
-            # Obstáculo 2 (obstacle2): Movimento horizontal para a direita e para baixo
-            if self.obstacle2_move_horizontal:
-                new_x = obstacle2_pos.x + movement_step
-                if new_x > x_max:
-                    self.obstacle2_move_horizontal = False
-                    new_x = x_max
-                self.send_obstacle_state('turtlebot3_dqn_obstacle2', new_x, obstacle2_pos.y)
-            else:
-                new_y = obstacle2_pos.y - movement_step
-                if new_y < y_min:
-                    self.obstacle2_move_horizontal = True
-                    new_y = y_min
-                self.send_obstacle_state('turtlebot3_dqn_obstacle2', obstacle2_pos.x, new_y)
+            # Obstacle 2 moviment
+            if self.obstacle2_direction > 0:  # Movendo para a direita
+                if obstacle2_pos.x >= x_max:
+                    self.obstacle2_direction = -1  # Change to move vertically
+            else:  # Change to the left or vertically
+                if obstacle2_pos.x <= x_min:
+                    self.obstacle2_direction = 1  # Change to move horizontally
+                else:
+                    self.obstacle2_y += self.obstacle2_direction * movement_step  # Continue movendo verticalmente
 
-            # Enviar solicitação para mover os obstáculos
-            self.send_obstacle_state('turtlebot3_dqn_obstacle1', self.obstacle1_x, obstacle1_pos.y)
-            self.send_obstacle_state('turtlebot3_dqn_obstacle2', obstacle2_pos.x, self.obstacle2_y)
+            # Update position if obstacles get stuck
+            self.obstacle1_y = max(min(obstacle1_pos.y + self.obstacle1_direction * movement_step, y_max), y_min)
+            self.obstacle2_x = max(min(obstacle2_pos.x + self.obstacle2_direction * movement_step, x_max), x_min)
+
+            # Send new position to obstacle
+            self.send_obstacle_state('turtlebot3_dqn_obstacle1', self.obstacle1_x, self.obstacle1_y)
+            self.send_obstacle_state('turtlebot3_dqn_obstacle2', self.obstacle2_x, self.obstacle2_y)
 
     def send_obstacle_state(self, obstacle_name, x, y):
         new_state = EntityState()
@@ -129,6 +125,7 @@ class Env(Node):
         request.state = new_state
         future = self.set_entity_state_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
+        # Uncomment to check if the obstacle was moved successfully
         # if future.result() is not None and future.result().success:
         #     self.get_logger().info(f"{obstacle_name} moved successfully to x: {x}, y: {y}.")
         # else:
@@ -427,6 +424,3 @@ class Trainer():
     def kill_env(self):
         self.env.destroy_node()
         self.writer.close()
-
-
-
