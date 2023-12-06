@@ -419,6 +419,7 @@ class Trainer():
                 plt.xlabel("Episode")
                 plt.ylabel("Acumulated Reward")
                 plt.legend()  # Add legend to the plot
+                plt.title(f'{self.algorithm_name} - Stage {stage}')
                 plt.savefig('acum_rwds.png')
 
     def kill_env(self):
