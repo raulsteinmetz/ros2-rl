@@ -14,7 +14,7 @@ Edit your .world file, in your turtlebot3_simulations path, in my case it will b
 ~/turtlebot_ws/src/turtlebot3_simulations/turtlebot3_gazebo/worlds/turtlebot3_dqn_stage4.world 
 ```
 
-Before the closing tag of the world ```**</world>**``` , copy and paste the plugin that will alow to control the objects in the sdf with Python script.
+Before the closing tag of the world ```</world>``` , copy and paste the plugin that will alow to control the objects in the sdf with Python script.
 ```bash
     <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
       <ros>
@@ -33,7 +33,7 @@ After that, import the required libraries and just control the objects in the sc
         new_state.pose.position.x = x
         new_state.pose.position.y = y
         new_state.pose.position.z = 0.0 
-        new_state.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)  # Sem rotação
+        new_state.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
 
         request = SetEntityState.Request()
         request.state = new_state
