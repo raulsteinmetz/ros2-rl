@@ -37,12 +37,6 @@ class Env(Node):
         self.reset_client = self.create_client(Empty, '/reset_simulation') # resetting simulation
         self.get_entity_state_client = self.create_client(GetEntityState, '/demo/get_entity_state')
         self.set_entity_state_client = self.create_client(SetEntityState, '/demo/set_entity_state')
-        self.obstacle1_x = 0.0  # Posição inicial x do obstacle1
-        self.obstacle1_y = 0.0  # Posição inicial y do obstacle1
-        self.obstacle2_x = 0.0  # Posição inicial x do obstacle2
-        self.obstacle2_y = 0.0  # Posição inicial y do obstacle2
-        self.obstacle1_direction = 1.0  # 1 para direita, -1 para esquerda
-        self.obstacle2_direction = 1.0  # 1 para cima, -1 para baixo
 
         # internal state
         self.reset_info()
@@ -65,71 +59,6 @@ class Env(Node):
     def scan_callback(self, msg):
         self.scan_data = msg
 
-    def get_obstacle_position(self, obstacle_name):
-        future = self.get_entity_state_client.call_async(GetEntityState.Request(name=obstacle_name))
-        rclpy.spin_until_future_complete(self, future)
-        if future.result() is not None:
-            return future.result().state.pose.position
-        else:
-            self.get_logger().error(f"Failed to get position for {obstacle_name}")
-            return None
-
-    def move_obstacles(self):
-        # Limits of moviment
-        x_min, x_max = -1.5, 1.5
-        y_min, y_max = -1.5, 1.5
-        movement_step = 0.02
-
-        # Obtain current position of each obstacle
-        obstacle1_pos = self.get_obstacle_position('turtlebot3_dqn_obstacle1')
-        obstacle2_pos = self.get_obstacle_position('turtlebot3_dqn_obstacle2')
-
-        if obstacle1_pos and obstacle2_pos:
-            # Obstacle 1 moviment
-            if self.obstacle1_direction > 0:  # Movendo para cima
-                if obstacle1_pos.y >= y_max:
-                    self.obstacle1_direction = -1  # Change to move horizontally
-            else:  # Movendo para baixo ou horizontalmente
-                if obstacle1_pos.y <= y_min:
-                    self.obstacle1_direction = 1  # Change to move vertically
-                else:
-                    self.obstacle1_x += self.obstacle1_direction * movement_step  # Continue movendo horizontalmente
-
-            # Obstacle 2 moviment
-            if self.obstacle2_direction > 0:  # Movendo para a direita
-                if obstacle2_pos.x >= x_max:
-                    self.obstacle2_direction = -1  # Change to move vertically
-            else:  # Change to the left or vertically
-                if obstacle2_pos.x <= x_min:
-                    self.obstacle2_direction = 1  # Change to move horizontally
-                else:
-                    self.obstacle2_y += self.obstacle2_direction * movement_step  # Continue movendo verticalmente
-
-            # Update position if obstacles get stuck
-            self.obstacle1_y = max(min(obstacle1_pos.y + self.obstacle1_direction * movement_step, y_max), y_min)
-            self.obstacle2_x = max(min(obstacle2_pos.x + self.obstacle2_direction * movement_step, x_max), x_min)
-
-            # Send new position to obstacle
-            self.send_obstacle_state('turtlebot3_dqn_obstacle1', self.obstacle1_x, self.obstacle1_y)
-            self.send_obstacle_state('turtlebot3_dqn_obstacle2', self.obstacle2_x, self.obstacle2_y)
-
-    def send_obstacle_state(self, obstacle_name, x, y):
-        new_state = EntityState()
-        new_state.name = obstacle_name
-        new_state.pose.position.x = x
-        new_state.pose.position.y = y
-        new_state.pose.position.z = 0.0  # Supondo que z é constante
-        new_state.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)  # Sem rotação
-
-        request = SetEntityState.Request()
-        request.state = new_state
-        future = self.set_entity_state_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        # Uncomment to check if the obstacle was moved successfully
-        # if future.result() is not None and future.result().success:
-        #     self.get_logger().info(f"{obstacle_name} moved successfully to x: {x}, y: {y}.")
-        # else:
-        #     self.get_logger().error(f"Failed to move {obstacle_name}.")
 
 
     def get_state(self, linear_vel, angular_vel):
@@ -203,18 +132,6 @@ class Env(Node):
 
         state, _, _, _, = self.get_state(0, 0)
 
-        self.obstacle1_x = 0.0  # Presumivelmente no centro da "mini-caixa" em X
-        self.obstacle1_y = 0.0  # Presumivelmente no centro da "mini-caixa" em Y
-        self.obstacle2_x = 0.0  # Presumivelmente no centro da "mini-caixa" em X
-        self.obstacle2_y = 0.0  # Presumivelmente no centro da "mini-caixa" em Y
-
-        self.obstacle1_direction = 1.0  # Vai começar se movendo para cima em Y
-        self.obstacle2_direction = 1.0  # Vai começar se movendo para a direita em X
-
-        # Flags para controle de direção
-        self.obstacle1_move_vertical = True  # Controla se o obstacle1 está se movendo verticalmente
-        self.obstacle2_move_horizontal = True  # Controla se o obstacle2 está se movendo horizontalmente
-
         return state
     
     
@@ -253,7 +170,7 @@ class Env(Node):
         if stage == 1:
             self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
             self.target_y = random.uniform(-1.90, 1.90)
-        elif stage in [2, 3, 4]:
+        elif stage == 2:
             area = np.random.randint(0, 4)
             if area == 0: 
                 self.target_x = random.uniform(-1.90, -1.60)
@@ -267,7 +184,14 @@ class Env(Node):
             elif area == 3:
                 self.target_x = random.uniform(1.60, 1.90)
                 self.target_y = random.uniform(1.60, 1.90)
-
+        elif stage == 3:
+            area = np.random.randint(0, 1)
+            if area == 0:
+                self.target_x = random.uniform(-1.6, -1.9)
+                self.target_y = random.uniform(-1.9, 1.9)
+            elif area == 1:
+                self.target_x = random.uniform(-1.9, 1.9)
+                self.target_y = random.uniform(-1.6, 1.9)
 
 
         fixed_z = 0.01  # fixed z coordinate, just above ground level
@@ -306,8 +230,6 @@ class Env(Node):
 
 
     def step(self, action, step, max_steps_per_episode, discrete, stage):
-        if stage == 4:
-            self.move_obstacles()
 
         rclpy.spin_once(self, timeout_sec=0.5)
         if discrete == True:
@@ -338,10 +260,11 @@ class Env(Node):
 
 
 class Trainer():
-    def __init__(self, algorithm_name='undefined', stage='undefined'):
+    def __init__(self, algorithm_name='undefined', stage=3):
         self.env = Env()
         self.algorithm_name = algorithm_name
-        self.writer = SummaryWriter(f"runs/{algorithm_name}/{stage}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
+        self.writer = SummaryWriter(f"runs/{algorithm_name}/{str(stage)}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
+        self.stage = stage
 
     def train(self, agent, episodes, max_steps, load_models=True, stage=1, discrete=False):
         if load_models:

@@ -1,7 +1,7 @@
 <?xml version='1.0'?>
 <sdf version='1.6'>
   <model name='obstacles_stage3'>
-    <pose frame=''>0 0 0 0 0 5.5</pose>
+    <pose frame=''>-0.2 -0.2 0 0 0 5.5</pose>
     <link name='obstacle'>
       <!-- Define the U-shaped obstacle using three box geometries -->
       
