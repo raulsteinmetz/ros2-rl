@@ -6,3 +6,8 @@ Key Components:
 - Gazebo Simulation: Provides a realistic and intricate 3D environment where our Turtlebot3 robot navigates. The simulation includes obstacles and walls, creating scenarios akin to real-world navigation challenges.
 - Turtlebot3 Robot: A versatile and widely-used robotic platform that serves as the agent in our DRL experiments. It navigates through the Gazebo environment, making decisions based on sensor inputs and learning algorithms.
 - Deep Reinforcement Learning: At the core of our project, DRL algorithms enable the Turtlebot3 to learn efficient navigation strategies through trial and error, optimizing its pathfinding abilities over time.
+
+
+To modify DRL stages, you can find the world launch files at: `~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/world`
+
+They will normally call an obstacle sdf, located at `~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_dqn_world/`, just create one folder with a new sdf and call it!
