@@ -1,60 +1,60 @@
 <?xml version='1.0'?>
 <sdf version='1.6'>
   <model name='obstacles_stage3'>
-    <pose frame=''>0 0 0 0 0 0</pose>
+    <pose frame=''>0 0 0 0 0 5.5</pose>
     <link name='obstacle'>
       <!-- Define the U-shaped obstacle using three box geometries -->
       
       <!-- Bottom part of U -->
       <collision name='u_obstacle_bottom'>
-        <pose>0 0 0.25 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>0 0 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>1.0 0.2 0.5</size> <!-- Adjust size as needed -->
+            <size>2.0 0.4 1</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </collision>
       <visual name='u_obstacle_bottom'>
-        <pose>0 0 0.25 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>0 0 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>1.0 0.2 0.5</size> <!-- Adjust size as needed -->
+            <size>2.0 0.4 1</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </visual>
 
       <!-- Left side of U -->
       <collision name='u_obstacle_left'>
-        <pose>-0.5 0.3 0.25 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>-1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.2 0.6 0.5</size> <!-- Adjust size as needed -->
+            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </collision>
       <visual name='u_obstacle_left'>
-        <pose>-0.5 0.3 0.25 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>-1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.2 0.6 0.5</size> <!-- Adjust size as needed -->
+            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </visual>
 
       <!-- Right side of U -->
       <collision name='u_obstacle_right'>
-        <pose>0.5 0.3 0.25 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.2 0.6 0.5</size> <!-- Adjust size as needed -->
+            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </collision>
       <visual name='u_obstacle_right'>
-        <pose>0.5 0.3 0.25 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.2 0.6 0.5</size> <!-- Adjust size as needed -->
+            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </visual>
