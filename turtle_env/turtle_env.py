@@ -195,14 +195,11 @@ class Env(Node):
         elif stage == 4:
             area = np.random.randint(0, 2)
             if area == 0:
-                self.target_x = random.uniform(1.8, 1.9)
-                self.target_y = random.uniform(-1.8, -1.9)
+                self.target_x = 1.9
+                self.target_y = -1.9
             elif area == 1:
                 self.target_x = random.uniform(-1.9, 1.9)
-                self.target_y = random.uniform(1.8, 1.9)
-            else:
-                raise Exception("Invalid area")
-
+                self.target_y = random.uniform(1.9, 1.9)
 
         fixed_z = 0.01  # fixed z coordinate, just above ground level
 

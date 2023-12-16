@@ -7,7 +7,7 @@
       
       <!-- single wall -->
       <collision name='single_wall'>
-        <pose>0 1.7 0.8 0 0 0.8</pose> <!-- Adjust pose as needed -->
+        <pose>0 1.7 0 0 0 0.8</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
             <size>1.2 0.3 0.8</size> <!-- Adjust size as needed -->
@@ -15,7 +15,7 @@
         </geometry>
       </collision>
       <visual name='single_wall'>
-        <pose>0 1.7 0.8 0 0 0.8</pose> <!-- Adjust pose as needed -->
+        <pose>0 1.7 0 0 0 0.8</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
             <size>1.2 0.3 0.8</size> <!-- Adjust size as needed -->
