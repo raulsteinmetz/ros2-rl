@@ -10,7 +10,7 @@
         <pose>0 1.7 0.8 0 0 0.8</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>1.5 0.4 1</size> <!-- Adjust size as needed -->
+            <size>1.2 0.3 0.8</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </collision>
@@ -18,7 +18,7 @@
         <pose>0 1.7 0.8 0 0 0.8</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>1.5 0.4 1</size> <!-- Adjust size as needed -->
+            <size>1.2 0.3 0.8</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </visual>
