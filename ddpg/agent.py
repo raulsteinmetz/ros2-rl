@@ -95,6 +95,31 @@ class Agent:
 
         self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.01) * np.ones(1), theta=0.1)
 
+    def soft_update(self, target, source, tau):
+        for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+    def hard_update(self, target, source):
+        for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(param.data)
+
+    def get_exploitation_action(self, state):
+        self.actor.eval()  # Put the actor in evaluation mode
+        state = T.tensor(state, dtype=T.float32).to(self.device)
+        action = self.actor(state).detach()
+        self.actor.train()  # Return to training mode
+        return action.cpu().numpy()
+    
+    def get_exploration_action(self, state):
+        self.actor.eval()
+        state = T.tensor(state,dtype=T.float32).to(self.device)
+        action = self.actor(state).detach()
+        self.actor.train()
+
+        noise = self.noise.sample()
+        action = action.cpu().numpy() + noise
+        return np.clip(action.numpy(), self.action_low, self.action_high)
+
     def update(self, state_batch, action_batch, reward_batch, next_state_batch):
         # state_batch = T.tensor(state_batch, dtype=T.float32)
         # action_batch = T.tensor(action_batch, dtype=T.float32)
@@ -126,9 +151,7 @@ class Agent:
 
         state_batch, action_batch, reward_batch, next_state_batch = \
                 self.memory.sample_buffer(self.batch_size)
-
         self.optimize(state_batch, action_batch, reward_batch, next_state_batch)
-        self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
     def policy(self, state, add_noise=True):
         state = state.clone().detach().to(self.device)
@@ -192,6 +215,11 @@ class Agent:
 
         # Atualizando as redes-alvo
         self.update_target()
+
+        self.soft_update(self.target_actor, self.actor, self.tau)
+        self.soft_update(self.target_critic, self.critic, self.tau)
+        self.update(state_batch, action_batch, reward_batch, next_state_batch)
+
 
     # Save and load model weights
     def try_load_model_weights(self, model, file_path):
