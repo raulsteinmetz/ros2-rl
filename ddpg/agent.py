@@ -93,7 +93,7 @@ class Agent:
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.02) * np.ones(1), theta=0.2)
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.01) * np.ones(1), theta=0.1)
 
     def update(self, state_batch, action_batch, reward_batch, next_state_batch):
         # state_batch = T.tensor(state_batch, dtype=T.float32)
@@ -143,15 +143,19 @@ class Agent:
         return (legal_action)
     
     def choose_action(self, observation):
+        normalized_observation = observation / np.linalg.norm(observation)
         # Convert observation to tensor and send to device
-        state = T.tensor([observation], dtype=T.float32).to(self.device)
+        state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
         
         # Get action from policy
         action = self.policy(state)[0]
+        print(f"Choosen action: {action}")
 
         # Apply noise if in training mode
         action[0] = np.clip(np.random.normal(action[0], var_v), 0., ACTION_V_MAX)
         action[1] = np.clip(np.random.normal(action[1], var_w), -ACTION_W_MAX, ACTION_W_MAX)
+        print(f"Choosen action (after np clip): {action}")
+        print(f"Choosen action (after np clip) with noise: {action.cpu() + self.noise()}")
 
         # Return the action
         return action

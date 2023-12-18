@@ -203,8 +203,8 @@ class RobotControllerNode(Node):
         ACTION_W_MAX = 1. # rad/s
 
         # Learning rate for actor-critic models
-        critic_lr = 0.0001
-        actor_lr = 0.0001
+        critic_lr = 0.001
+        actor_lr = 0.001
 
         # Discount factor for future rewards
         gamma = 0.99
