@@ -120,30 +120,30 @@ class Agent:
         action = action.cpu().numpy() + noise
         return np.clip(action.numpy(), self.action_low, self.action_high)
 
-    def update(self, state_batch, action_batch, reward_batch, next_state_batch):
-        # state_batch = T.tensor(state_batch, dtype=T.float32)
-        # action_batch = T.tensor(action_batch, dtype=T.float32)
-        # reward_batch = T.tensor(reward_batch, dtype=T.float32)
-        # next_sate_batch = T.tensor(next_state_batch, dtype=T.float32)
+    # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
+    #     # state_batch = T.tensor(state_batch, dtype=T.float32)
+    #     # action_batch = T.tensor(action_batch, dtype=T.float32)
+    #     # reward_batch = T.tensor(reward_batch, dtype=T.float32)
+    #     # next_sate_batch = T.tensor(next_state_batch, dtype=T.float32)
 
-        # Update critic
-        self.critic_optimizer.zero_grad()
-        with T.no_grad():
-            target_actions = self.target_actor(next_state_batch)
-            target_values = self.target_critic(next_state_batch, target_actions)
-            y = reward_batch + self.gamma * target_values
-        critic_value = self.critic(state_batch, action_batch)
-        critic_loss = nn.MSELoss()(critic_value, y)
-        critic_loss.backward()
-        self.critic_optimizer.step()
+    #     # Update critic
+    #     self.critic_optimizer.zero_grad()
+    #     with T.no_grad():
+    #         target_actions = self.target_actor(next_state_batch)
+    #         target_values = self.target_critic(next_state_batch, target_actions)
+    #         y = reward_batch + self.gamma * target_values
+    #     critic_value = self.critic(state_batch, action_batch)
+    #     critic_loss = nn.MSELoss()(critic_value, y)
+    #     critic_loss.backward()
+    #     self.critic_optimizer.step()
 
-        # Update actor
-        self.actor_optimizer.zero_grad()
-        actions = self.actor(state_batch)
-        critic_value = self.critic(state_batch, actions)
-        actor_loss = -critic_value.mean()
-        actor_loss.backward()
-        self.actor_optimizer.step()
+    #     # Update actor
+    #     self.actor_optimizer.zero_grad()
+    #     actions = self.actor(state_batch)
+    #     critic_value = self.critic(state_batch, actions)
+    #     actor_loss = -critic_value.mean()
+    #     actor_loss.backward()
+    #     self.actor_optimizer.step()
 
     def learn(self):
         if self.memory.buffer_counter < self.batch_size:
@@ -218,7 +218,7 @@ class Agent:
 
         self.soft_update(self.target_actor, self.actor, self.tau)
         self.soft_update(self.target_critic, self.critic, self.tau)
-        self.update(state_batch, action_batch, reward_batch, next_state_batch)
+        # self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
 
     # Save and load model weights
