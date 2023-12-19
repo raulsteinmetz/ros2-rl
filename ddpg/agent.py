@@ -118,7 +118,7 @@ class Agent:
         self.actor.train()
 
         noise = self.noise()
-        action = action.cpu().numpy() # + noise
+        action = action.cpu().numpy() + noise
         return np.clip(action, self.action_low, self.action_high)
 
     # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
@@ -168,11 +168,9 @@ class Agent:
     
     def choose_action(self, observation):
         # Normaliza a observação
-        # normalized_observation = observation / np.linalg.norm(observation)
+        normalized_observation = observation / np.linalg.norm(observation)
         # Converte a observação para tensor e envia para o dispositivo
-        # state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
-        state = T.tensor([observation], dtype=T.float32).to(self.device)
-
+        state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
 
         # Obter ação
         if self.training_mode:
@@ -181,6 +179,7 @@ class Agent:
             action = self.get_exploitation_action(state)
 
         print(f"Choosen action: {action}")
+
         
         action = action.squeeze()
 
@@ -191,6 +190,7 @@ class Agent:
         return action
     
     def remember(self, state, action, reward, new_state, done):
+        # guardar acoes e consequencias no buffer de memoria
         self.memory.store_transition(state, action, reward, new_state)
 
     def update_target(self):
