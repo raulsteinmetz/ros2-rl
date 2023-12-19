@@ -15,8 +15,8 @@ def main(args=None):
     ACTION_W_MAX = 1. # rad/s
 
     # Learning rate for actor-critic models
-    critic_lr = 0.0001
-    actor_lr = 0.0001
+    critic_lr = 0.001
+    actor_lr = 0.001
 
     # Discount factor for future rewards
     gamma = 0.99
@@ -24,7 +24,7 @@ def main(args=None):
     tau = 0.001
 
     agent = Agent(num_states, num_actions, upper_bound, lower_bound, gamma, tau, critic_lr, actor_lr, 0.2)
-    trainer.train(agent, 5000, 140, False, 1)
+    trainer.train(agent, 5000, 500, False, 1)
     trainer.kill_env()
     rclpy.shutdown()
 

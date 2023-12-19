@@ -8,10 +8,6 @@ from ddpg.noise import OUActionNoise
 from ddpg.utils import get_gpu, fanin_init
 import os
 
-ACTION_V_MAX = 0.22 # m/s
-ACTION_W_MAX = 1. # rad/s
-var_v = ACTION_V_MAX * 0.30
-var_w = ACTION_W_MAX * 2 * 0.15
 
 class Actor(nn.Module):
     def __init__(self, state_space, action_high, action_space, action_limit_v=0.22, action_limit_w=1.0):
@@ -93,8 +89,13 @@ class Agent:
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.01) * np.ones(1), theta=0.1)
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.2) * np.ones(1), theta=0.15)
         self.training_mode=True
+
+        self.ACTION_V_MAX = 0.22 # m/s
+        self.ACTION_W_MAX = 1. # rad/s
+        self.var_v = self.ACTION_V_MAX * 0.30
+        self.var_w = self.ACTION_W_MAX * 2 * 0.15
 
     def soft_update(self, target, source, tau):
         for target_param, param in zip(target.parameters(), source.parameters()):
@@ -105,21 +106,31 @@ class Agent:
             target_param.data.copy_(param.data)
 
     def get_exploitation_action(self, state):
-        self.actor.eval()  # Put the actor in evaluation mode
-        state = T.tensor(state, dtype=T.float32).to(self.device)
+        self.actor.eval()
+        if isinstance(state, list):  # Se o estado for uma lista
+            state = np.array(state)  # Converta para um array do NumPy
+        if isinstance(state, np.ndarray):  # Se o estado for um array do NumPy
+            state = T.from_numpy(state).float().to(self.device)
+        else:  # Se já for um tensor
+            state = state.float().to(self.device)
         action = self.actor(state).detach()
-        self.actor.train()  # Return to training mode
+        self.actor.train()
         return action.cpu().numpy()
-    
+
     def get_exploration_action(self, state):
         self.actor.eval()
-        state = T.tensor(state, dtype=T.float32).to(self.device)
+        if isinstance(state, list):  # Se o estado for uma lista
+            state = np.array(state)  # Converta para um array do NumPy
+        if isinstance(state, np.ndarray):  # Se o estado for um array do NumPy
+            state = T.from_numpy(state).float().to(self.device)
+        else:  # Se já for um tensor
+            state = state.float().to(self.device)
         action = self.actor(state).detach()
         self.actor.train()
 
-        noise = self.noise()
-        action = action.cpu().numpy() + noise
-        return np.clip(action, self.action_low, self.action_high)
+        noise = T.tensor(self.noise(), dtype=T.float32).to(self.device)
+        action += noise
+        return action.cpu().numpy()
 
     # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
     #     # state_batch = T.tensor(state_batch, dtype=T.float32)
@@ -153,8 +164,9 @@ class Agent:
         state_batch, action_batch, reward_batch, next_state_batch = \
                 self.memory.sample_buffer(self.batch_size)
         self.optimize(state_batch, action_batch, reward_batch, next_state_batch)
+        self.adjust_noise()
 
-    def policy(self, state, add_noise=True):
+    def policy(self, state, add_noise=False):
         state = state.clone().detach().to(self.device)
         action = self.actor(state).detach()
         if add_noise:
@@ -166,28 +178,24 @@ class Agent:
         legal_action = np.clip(action.numpy(), self.action_low, self.action_high)
         return (legal_action)
     
-    def choose_action(self, observation):
-        # Normaliza a observação
-        normalized_observation = observation / np.linalg.norm(observation)
-        # Converte a observação para tensor e envia para o dispositivo
-        state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
-
-        # Obter ação
-        if self.training_mode:
-            action = self.get_exploration_action(state)
+    def choose_action(self, observation, training_mode=True):
+             # Converte a observação para tensor e envia para o dispositivo
+        state = T.tensor(observation, dtype=T.float32).to(self.device)
+        
+        # Se estiver no modo de treinamento, obtenha ação com exploração
+        if training_mode:
+            # action = self.get_exploration_action(state)
+            action = self.get_exploration_action(observation)
         else:
             action = self.get_exploitation_action(state)
-
-        print(f"Choosen action: {action}")
-
+            action = action.cpu().numpy()  # Adicionado .cpu().numpy() aqui
         
-        action = action.squeeze()
-
-        action[0] = np.clip(np.random.normal(action[0], var_v), 0., ACTION_V_MAX)
-        action[1] = np.clip(np.random.normal(action[1], var_w), -ACTION_W_MAX, ACTION_W_MAX)
-        print(f"Choosen action (after clipping): {action[0]} - {action[1]}")
-
         return action
+
+    def adjust_noise(self):
+        # Decrementa var_v e var_w com um fator de decaimento
+        self.var_v = max(self.var_v * 0.99999, 0.30 * self.ACTION_V_MAX)
+        self.var_w = max(self.var_w * 0.99999, 0.30 * self.ACTION_W_MAX)
     
     def remember(self, state, action, reward, new_state, done):
         # guardar acoes e consequencias no buffer de memoria
@@ -200,31 +208,58 @@ class Agent:
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
     def optimize(self, state_batch, action_batch, reward_batch, next_state_batch):
-        # Update critic network
+        # Verifica se há amostras suficientes no buffer para um lote de treinamento
+        if self.memory.buffer_counter < self.batch_size:
+            return
+
+        # Amostra um lote de transições (s, a, r, s') do buffer de replay
+        state_batch, action_batch, reward_batch, next_state_batch = \
+                self.memory.sample_buffer(self.batch_size)
+
+        # Prepara os dados para a GPU, se disponível
+        state_batch = state_batch.to(self.device)
+        action_batch = action_batch.to(self.device)
+        reward_batch = reward_batch.to(self.device)
+        next_state_batch = next_state_batch.to(self.device)
+
+        # Calcula o valor alvo da próxima ação usando a rede alvo do crítico
+        target_actions = self.target_actor(next_state_batch)
+        target_values = self.target_critic(next_state_batch, target_actions).squeeze(-1)
+
+        # Calcula o valor esperado com desconto futuro e recompensas
+        y_expected = reward_batch.view(-1, 1) + self.gamma * target_values.view(-1, 1)
+        print("Shape of y_expected before .view(-1, 1):", y_expected.shape)
+        y_expected = y_expected.view(-1, 1)  # Garante que seja [batch_size, 1]
+
+        # Calcula o valor esperado usando a rede crítica atual
+        y_predicted = self.critic(state_batch, action_batch)
+        print("Shape of y_predicted before .view(-1, 1):", y_predicted.shape)
+        y_predicted = y_predicted.view(-1, 1)  # Garante que seja [batch_size, 1]
+
+
+        print("Shape of y_expected:", y_expected.shape)
+        print("Shape of y_predicted:", y_predicted.shape)
+
+        # Calcula a perda do crítico
+        loss_critic = F.mse_loss(y_predicted, y_expected)
+
+        # Atualiza o crítico
         self.critic_optimizer.zero_grad()
-        with T.no_grad():
-            target_actions = self.target_actor(next_state_batch)
-            target_values = self.target_critic(next_state_batch, target_actions)
-            y = reward_batch + self.gamma * target_values
-        critic_value = self.critic(state_batch, action_batch)
-        critic_loss = F.mse_loss(critic_value, y)
-        critic_loss.backward()
+        loss_critic.backward()
         self.critic_optimizer.step()
 
-        # Update the actor network
+        # Calcula a perda do ator
+        predicted_actions = self.actor(state_batch)
+        loss_actor = -T.mean(self.critic(state_batch, predicted_actions))
+
+        # Atualiza o ator
         self.actor_optimizer.zero_grad()
-        actions = self.actor(state_batch)
-        critic_value = self.critic(state_batch, actions)
-        actor_loss = -T.mean(critic_value)
-        actor_loss.backward()
+        loss_actor.backward()
         self.actor_optimizer.step()
 
-        # Atualizando as redes-alvo
-        self.update_target()
-
+        # Atualiza as redes alvo
         self.soft_update(self.target_actor, self.actor, self.tau)
         self.soft_update(self.target_critic, self.critic, self.tau)
-        # self.update(state_batch, action_batch, reward_batch, next_state_batch)
 
 
     # Save and load model weights
