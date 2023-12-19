@@ -25,7 +25,7 @@ class Actor(nn.Module):
         self.fa2 = nn.Linear(512, 512)
         self.fa2.weight.data = fanin_init(self.fa2.weight.data.size())
 
-        self.fa3 = nn.Linear(512, action_space)
+        self.fa3 = nn.Linear(512, 2)
         self.fa3.weight.data.uniform_(-self.EPS, self.EPS)
 
     def forward(self, state):
@@ -94,6 +94,7 @@ class Agent:
         self.target_critic.load_state_dict(self.critic.state_dict())
 
         self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.01) * np.ones(1), theta=0.1)
+        self.training_mode=True
 
     def soft_update(self, target, source, tau):
         for target_param, param in zip(target.parameters(), source.parameters()):
@@ -112,13 +113,13 @@ class Agent:
     
     def get_exploration_action(self, state):
         self.actor.eval()
-        state = T.tensor(state,dtype=T.float32).to(self.device)
+        state = T.tensor(state, dtype=T.float32).to(self.device)
         action = self.actor(state).detach()
         self.actor.train()
 
-        noise = self.noise.sample()
+        noise = self.noise()
         action = action.cpu().numpy() + noise
-        return np.clip(action.numpy(), self.action_low, self.action_high)
+        return np.clip(action, self.action_low, self.action_high)
 
     # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
     #     # state_batch = T.tensor(state_batch, dtype=T.float32)
@@ -166,25 +167,28 @@ class Agent:
         return (legal_action)
     
     def choose_action(self, observation):
+        # Normaliza a observação
         normalized_observation = observation / np.linalg.norm(observation)
-        # Convert observation to tensor and send to device
+        # Converte a observação para tensor e envia para o dispositivo
         state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
-        
-        # Get action from policy
-        action = self.policy(state)[0]
-        print(f"Choosen action: {action}")
 
-        # Apply noise if in training mode
+        # Obter ação
+        if self.training_mode:
+            action = self.get_exploration_action(state)
+        else:
+            action = self.get_exploitation_action(state)
+
+        print(f"Choosen action: {action}")
+        
+        action = action.squeeze()
+
         action[0] = np.clip(np.random.normal(action[0], var_v), 0., ACTION_V_MAX)
         action[1] = np.clip(np.random.normal(action[1], var_w), -ACTION_W_MAX, ACTION_W_MAX)
-        print(f"Choosen action (after np clip): {action}")
-        print(f"Choosen action (after np clip) with noise: {action.cpu() + self.noise()}")
+        print(f"Choosen action (after clipping): {action[0]} - {action[1]}")
 
-        # Return the action
         return action
     
     def remember(self, state, action, reward, new_state, done):
-        # guardar acoes e consequencias no buffer de memoria
         self.memory.store_transition(state, action, reward, new_state)
 
     def update_target(self):
