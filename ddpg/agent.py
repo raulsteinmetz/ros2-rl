@@ -118,7 +118,7 @@ class Agent:
         self.actor.train()
 
         noise = self.noise()
-        action = action.cpu().numpy() + noise
+        action = action.cpu().numpy() # + noise
         return np.clip(action, self.action_low, self.action_high)
 
     # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
