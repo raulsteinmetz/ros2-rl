@@ -168,9 +168,11 @@ class Agent:
     
     def choose_action(self, observation):
         # Normaliza a observação
-        normalized_observation = observation / np.linalg.norm(observation)
+        # normalized_observation = observation / np.linalg.norm(observation)
         # Converte a observação para tensor e envia para o dispositivo
-        state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
+        # state = T.tensor([normalized_observation], dtype=T.float32).to(self.device)
+        state = T.tensor([observation], dtype=T.float32).to(self.device)
+
 
         # Obter ação
         if self.training_mode:
