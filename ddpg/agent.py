@@ -89,7 +89,7 @@ class Agent:
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
 
-        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.2) * np.ones(1), theta=0.15)
+        self.noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(0.1) * np.ones(1), theta=0.15)
         self.training_mode=True
 
         self.ACTION_V_MAX = 0.22 # m/s
@@ -128,9 +128,8 @@ class Agent:
         action = self.actor(state).detach()
         self.actor.train()
 
-        # Uncomment to reenable noise
-        # noise = T.tensor(self.noise(), dtype=T.float32).to(self.device)
-        # action += noise
+        noise = T.tensor(self.noise(), dtype=T.float32).to(self.device)
+        action += noise
         return action.cpu().numpy()
 
     # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
