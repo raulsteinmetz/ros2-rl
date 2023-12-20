@@ -128,8 +128,9 @@ class Agent:
         action = self.actor(state).detach()
         self.actor.train()
 
-        noise = T.tensor(self.noise(), dtype=T.float32).to(self.device)
-        action += noise
+        # Uncomment to reenable noise
+        # noise = T.tensor(self.noise(), dtype=T.float32).to(self.device)
+        # action += noise
         return action.cpu().numpy()
 
     # def update(self, state_batch, action_batch, reward_batch, next_state_batch):
@@ -226,19 +227,11 @@ class Agent:
         target_actions = self.target_actor(next_state_batch)
         target_values = self.target_critic(next_state_batch, target_actions).squeeze(-1)
 
-        # Calcula o valor esperado com desconto futuro e recompensas
         y_expected = reward_batch.view(-1, 1) + self.gamma * target_values.view(-1, 1)
-        print("Shape of y_expected before .view(-1, 1):", y_expected.shape)
         y_expected = y_expected.view(-1, 1)  # Garante que seja [batch_size, 1]
 
-        # Calcula o valor esperado usando a rede crítica atual
         y_predicted = self.critic(state_batch, action_batch)
-        print("Shape of y_predicted before .view(-1, 1):", y_predicted.shape)
         y_predicted = y_predicted.view(-1, 1)  # Garante que seja [batch_size, 1]
-
-
-        print("Shape of y_expected:", y_expected.shape)
-        print("Shape of y_predicted:", y_predicted.shape)
 
         # Calcula a perda do crítico
         loss_critic = F.mse_loss(y_predicted, y_expected)
