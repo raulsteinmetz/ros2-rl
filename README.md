@@ -14,7 +14,7 @@ They will normally call an obstacle sdf, located at `~/colcon_ws/src/turtlebot3_
 
 ## Modifying DRL Stages
 
-To modify the Deep Reinforcement Learning (DRL) stages, according to the ones in this folder, follow the steps below:
+To modify the Deep Reinforcement Learning (DRL) stages, according to the ones in this repository, follow the steps below:
 
 1. **Copy the contents of the `launch`, `models`, and `worlds` directories to your desired locations using the following commands:**
 
