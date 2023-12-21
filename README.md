@@ -11,3 +11,30 @@ Key Components:
 To modify DRL stages, you can find the world launch files at: `~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/world`
 
 They will normally call an obstacle sdf, located at `~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_dqn_world/`, just create one folder with a new sdf and call it!
+
+## Modifying DRL Stages
+
+To modify the Deep Reinforcement Learning (DRL) stages, according to the ones in this folder, follow the steps below:
+
+1. **Copy the contents of the `launch`, `models`, and `worlds` directories to your desired locations using the following commands:**
+
+   - For `launch`:
+     ```bash
+     cp -r turtlebot3_gazebo/launch ~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/launch
+     ```
+   
+   - For `models`:
+     ```bash
+     cp -r turtlebot3_gazebo/models ~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models
+     ```
+   
+   - For `worlds`:
+     ```bash
+     cp -r turtlebot3_gazebo/worlds ~/colcon_ws/src/turtlebot3_simulations/turtlebot3_gazebo/worlds
+     ```
+
+2. **Build your project with `colcon build --symlink-install` to apply the changes:**
+   ```bash
+   cd ~/colcon_ws
+   colcon build --symlink-install
+    ```
