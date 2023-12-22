@@ -25,18 +25,18 @@
 
       <!-- little square -->
       <collision name='little_square'>
-        <pose>-0.2 -1.7 0 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>-0.2 -1.45 0 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.1 0.1 0.1</size> <!-- Adjust size as needed -->
+            <size>0.2 0.2 1.0</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </collision>
       <visual name='little_square'>
-        <pose>-0.2 -1.7 0 0 0 0</pose> <!-- Adjust pose as needed -->
+        <pose>-0.2 -1.45 0 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.1 0.1 0.1</size> <!-- Adjust size as needed -->
+            <size>0.2 0.2 1.0</size> <!-- Adjust size as needed -->
           </box>
         </geometry>
       </visual>
