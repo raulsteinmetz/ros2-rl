@@ -1,6 +1,6 @@
 import rclpy
 from turtle_env.turtle_env import Trainer
-from ddpg_.ddpg_torch import Agent
+from ddpg.ddpg_torch import Agent
 
 
 def main(args=None):
