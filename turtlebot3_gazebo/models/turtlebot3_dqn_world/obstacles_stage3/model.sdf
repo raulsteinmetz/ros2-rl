@@ -10,7 +10,7 @@
         <pose>0 0 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>2.0 0.4 1</size> <!-- Adjust size as needed -->
+            <size>1.6 0.32 0.8</size> <!-- Reduced size -->
           </box>
         </geometry>
       </collision>
@@ -18,7 +18,7 @@
         <pose>0 0 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>2.0 0.4 1</size> <!-- Adjust size as needed -->
+            <size>2.3 0.32 0.8</size> <!-- Reduced size -->
           </box>
         </geometry>
       </visual>
@@ -28,7 +28,7 @@
         <pose>-1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
+            <size>2.3 1.2 0.8</size> <!-- Reduced size -->
           </box>
         </geometry>
       </collision>
@@ -36,7 +36,7 @@
         <pose>-1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
+            <size>0.32 1.2 0.8</size> <!-- Reduced size -->
           </box>
         </geometry>
       </visual>
@@ -46,7 +46,7 @@
         <pose>1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
+            <size>0.32 1.2 0.8</size> <!-- Reduced size -->
           </box>
         </geometry>
       </collision>
@@ -54,7 +54,7 @@
         <pose>1.0 0.6 0.5 0 0 0</pose> <!-- Adjust pose as needed -->
         <geometry>
           <box>
-            <size>0.4 1.2 1</size> <!-- Adjust size as needed -->
+            <size>0.32 1.2 0.8</size> <!-- Reduced size -->
           </box>
         </geometry>
       </visual>

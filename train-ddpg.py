@@ -5,7 +5,7 @@ from ddpg.ddpg_torch import Agent
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer('ddpg_')
+    trainer = Trainer('ddpg')
     num_states = 14
     num_actions = 2
 
@@ -24,7 +24,7 @@ def main(args=None):
     num_actions = num_actions
 
     agent = Agent(alpha, beta, [input_dims], tau, batch_size=64, fc1_dims=400, fc2_dims=300, n_actions=num_actions)
-    trainer.train(agent, 5000, 500, False, stage=1)
+    trainer.train(agent, 5000, 500, False, stage=3)
     trainer.kill_env()
     rclpy.shutdown()
 
