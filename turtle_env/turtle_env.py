@@ -275,7 +275,7 @@ class Trainer():
         self.writer = SummaryWriter(f"runs/{algorithm_name}/{str(stage)}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
         self.stage = stage
 
-    def train(self, agent, episodes, max_steps, load_models=True, stage=1, discrete=False):
+    def train(self, agent, episodes, max_steps, load_models=True, discrete=False):
         if load_models:
             agent.load_models()
 
@@ -290,14 +290,14 @@ class Trainer():
             step = 0
             done = False
 
-            state = self.env.reset_simulation(stage)
+            state = self.env.reset_simulation(self.stage)
             acum_reward = 0
 
             print('Episode: ', episode)
 
             while not done and step < max_steps:
                 action = agent.choose_action(state)
-                reward, done, state_ = self.env.step(action, step, max_steps, discrete, stage)
+                reward, done, state_ = self.env.step(action, step, max_steps, discrete, self.stage)
 
                 agent.remember(state, action, reward, state_, done)
                 state = state_
@@ -351,8 +351,8 @@ class Trainer():
                 plt.xlabel("Episode")
                 plt.ylabel("Acumulated Reward")
                 plt.legend()  # Add legend to the plot
-                plt.title(f'{self.algorithm_name} - Stage {stage}')
-                plt.savefig(f'{self.algorithm_name}/acum_rwds_{stage}.png')
+                plt.title(f'{self.algorithm_name} - Stage {self.stage}')
+                plt.savefig(f'{self.algorithm_name}/acum_rwds_{self.stage}.png')
 
     def kill_env(self):
         self.env.destroy_node()
