@@ -197,16 +197,11 @@ class Env(Node):
             chosen_point = random.choice(areas)
             self.target_x, self.target_y = chosen_point
         elif stage == 4:
-            area = np.random.randint(0, 3)
-            if area == 0:
-                self.target_x = random.uniform(1.8, 1.9)
-                self.target_y = random.uniform(-1.8, -1.9)
-            elif area == 1:
-                self.target_x = random.uniform(-1.8, -1.9)
-                self.target_y = random.uniform(-1.9, 1.9)
-            elif area == 2:
-                self.target_x = random.uniform(1.9, 1.1)
-                self.target_y = random.uniform(0.4, 1.1)
+            points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5),
+                      (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), 
+                      (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2), (-1.8, -1.8)]
+            chosen_point = random.choice(points)
+            self.target_x, self.target_y = chosen_point
 
         fixed_z = 0.01  # fixed z coordinate, just above ground level
 
