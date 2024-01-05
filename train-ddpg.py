@@ -5,7 +5,7 @@ from ddpg.ddpg_torch import Agent
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer(algorithm_name='sac', stage=3)
+    trainer = Trainer(algorithm_name='ddpg', stage=3)
     num_states = 14
     num_actions = 2
 
