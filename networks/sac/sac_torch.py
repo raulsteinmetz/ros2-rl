@@ -2,63 +2,108 @@ import os
 import torch as T
 import torch.nn.functional as F
 import numpy as np
-from networks.sac.buffer import ReplayBuffer
+from networks.util.buffer import ReplayBuffer
 from networks.sac.networks import ActorNetwork, CriticNetwork, ValueNetwork
 
-class Agent():
-    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[8],
-            action_space_high=2, gamma=0.99, n_actions=2, max_size=50000, tau=0.001,
-            batch_size=64, reward_scale=1):
+class Agent:
+    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=0, max_action=0, 
+                 gamma=0.99, n_actions=2, max_size=50000, tau=0.001, batch_size=64,
+                 reward_scale=1, min_action=0, checkpoint_dir='tmp/sac'):
+        """
+        Initialize the Soft Actor-Critic agent.
+
+        Args:
+            alpha (float): Learning rate for the actor network.
+            beta (float): Learning rate for the critic and value networks.
+            input_dims (int): Dimensions of the input state.
+            max_action (float): Maximum magnitude of action.
+            gamma (float): Discount factor for future rewards.
+            n_actions (int): Number of actions.
+            max_size (int): Maximum size of the replay buffer.
+            tau (float): Soft update coefficient for target networks.
+            batch_size (int): Size of the batch for learning.
+            reward_scale (float): Scaling factor for rewards.
+            min_action (float): Minimum magnitude of action.
+            checkpoint_dir (str): Directory to save the model checkpoints.
+        """
         self.gamma = gamma
         self.tau = tau
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
         self.batch_size = batch_size
         self.n_actions = n_actions
-
-        # inicializando as redes
-        self.actor = ActorNetwork(alpha, input_dims, n_actions=n_actions,
-                    name='actor', max_action=action_space_high)
-        self.critic_1 = CriticNetwork(beta, input_dims, n_actions=n_actions,
-                    name='critic_1')
-        self.critic_2 = CriticNetwork(beta, input_dims, n_actions=n_actions,
-                    name='critic_2')
-        self.value = ValueNetwork(beta, input_dims, name='value')
-        self.target_value = ValueNetwork(beta, input_dims, name='target_value')
-
+        self.name = 'sac'
         self.scale = reward_scale
+
+        # Initialize networks
+        self.actor = ActorNetwork(alpha, input_dims, max_action=max_action,
+                                  n_actions=n_actions, name='actor', chkpt_dir=checkpoint_dir)
+        self.critic_1 = CriticNetwork(beta, input_dims, n_actions=n_actions,
+                                      name='critic_1', chkpt_dir=checkpoint_dir)
+        self.critic_2 = CriticNetwork(beta, input_dims, n_actions=n_actions,
+                                      name='critic_2', chkpt_dir=checkpoint_dir)
+        self.value = ValueNetwork(beta, input_dims, name='value', chkpt_dir=checkpoint_dir)
+        self.target_value = ValueNetwork(beta, input_dims, name='target_value', chkpt_dir=checkpoint_dir)
+
+        # Initialize target network parameters
         self.update_network_parameters(tau=1)
 
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+
     def choose_action(self, observation):
-        # funcao de acao
+        """
+        Choose an action based on the current observation.
+
+        Args:
+            observation: The current state observation.
+
+        Returns:
+            action: The action chosen by the agent.
+        """
         state = T.Tensor([observation]).to(self.actor.device)
         actions, _ = self.actor.sample_normal(state, reparameterize=False)
 
         return actions.cpu().detach().numpy()[0]
 
     def remember(self, state, action, reward, new_state, done):
-        # guardar acoes e consequencias no buffer de memoria
+        """
+        Store a transition in the agent's memory.
+
+        Args:
+            state: The starting state.
+            action: The action taken.
+            reward: The reward received.
+            new_state: The resulting state after the action.
+            done: Boolean indicating whether the episode is finished.
+        """
         self.memory.store_transition(state, action, reward, new_state, done)
 
     def update_network_parameters(self, tau=None):
-        # atualizar os valores da rede
+        """
+        Perform a soft update of the target network parameters.
+
+        Args:
+            tau (float, optional): The update factor. If None, use self.tau.
+        """
         if tau is None:
             tau = self.tau
 
         target_value_params = self.target_value.named_parameters()
         value_params = self.value.named_parameters()
 
-        target_value_state_dict = dict(target_value_params)
-        value_state_dict = dict(value_params)
+        target_value_dict = dict(target_value_params)
+        value_dict = dict(value_params)
 
-        for name in value_state_dict:
-            value_state_dict[name] = tau*value_state_dict[name].clone() + \
-                    (1-tau)*target_value_state_dict[name].clone()
+        for name in value_dict:
+            value_dict[name] = tau * value_dict[name].clone() + (1 - tau) * target_value_dict[name].clone()
 
-        self.target_value.load_state_dict(value_state_dict)
+        self.target_value.load_state_dict(value_dict)
 
     def save_models(self):
-        # salvar os checkpoints da rede
-        print('.... saving models ....')
+        """
+        Save the current state of all networks as checkpoints.
+        """
+        print('... saving models ...')
         self.actor.save_checkpoint()
         self.value.save_checkpoint()
         self.target_value.save_checkpoint()
@@ -66,8 +111,10 @@ class Agent():
         self.critic_2.save_checkpoint()
 
     def load_models(self):
-        # carregar modelos pretreinados
-        print('.... loading models ....')
+        """
+        Load the saved states of all networks from checkpoints.
+        """
+        print('... loading models ...')
         self.actor.load_checkpoint()
         self.value.load_checkpoint()
         self.target_value.load_checkpoint()
@@ -75,13 +122,15 @@ class Agent():
         self.critic_2.load_checkpoint()
 
     def learn(self):
-        # funcao de treinamento da rede
+        """
+        Train the agent from a batch of experiences in the replay buffer.
+        """
         if self.memory.mem_cntr < self.batch_size:
             return
 
-        state, action, reward, new_state, done = \
-                self.memory.sample_buffer(self.batch_size)
+        state, action, reward, new_state, done = self.memory.sample_buffer(self.batch_size)
 
+        # Convert data to tensors and move them to the device
         reward = T.tensor(reward, dtype=T.float).to(self.actor.device)
         done = T.tensor(done).to(self.actor.device)
         state_ = T.tensor(new_state, dtype=T.float).to(self.actor.device)
@@ -134,4 +183,3 @@ class Agent():
         self.update_network_parameters()
 
         return critic_1_loss
-        
