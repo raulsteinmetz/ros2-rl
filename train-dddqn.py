@@ -1,6 +1,6 @@
 import rclpy
-from turtle_env.turtle_env import Trainer
-from dddqn.dddqn import Agent
+from training.trainer import Trainer
+from networks.dddqn.dddqn import Agent
 
 
 def main(args=None):
