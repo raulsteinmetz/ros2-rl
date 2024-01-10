@@ -81,7 +81,6 @@ class Trainer:
                 mov_avg_rwds.append(np.mean(acum_rwds[:episode + 1]))
 
             if episode == 1 or episode % 50 == 0:
-                agent.save_models()
                 self.writer.add_scalar('Accumulated Reward each 50 episodes', acum_reward, episode)
                 self.writer.add_scalar('Moving Average Reward each 50 episodes', mov_avg_rwds[-1], episode)
                 plt.plot(acum_rwds, alpha=0.5, label="Raw Reward" if episode == 0 else "")
