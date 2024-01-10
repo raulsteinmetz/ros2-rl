@@ -265,14 +265,36 @@ class Env(Node):
         if stage == 1:
             # Simple random positioning
             return random.uniform(-1.90, 1.90), random.uniform(-1.90, 1.90)
+        
         elif stage == 2:
             # More specific areas for spawning
             areas = [(-1.90, -1.60), (1.60, 1.90)]
             return (random.uniform(*random.choice(areas)), random.uniform(*random.choice(areas)))
+        
         elif stage == 3:
-            # Pre-defined set of areas
-            areas = [(0.4, 0.4), (0.2, 1.9), (2, -0.2), (-1.5, 1.5), (1.8, -1.5), (-1.7, 0), (-1.8, -1.8), (-0.5, -1.8)]
-            return random.choice(areas)
+            open_areas = [(0.4, 0.4), (1.9, -1), (0, -1.5), (-1.5, 0)]
+            medium_areas = [(0.8, 1.7), (0.2, 1.9), (-1.5, -1.5), (-1.2, -1.2)]
+            complex_areas = [(-1.8, 1.5), (-1.5, 1.8), (1.9, 0.4), (-1.7, -1.9)]
+
+            avoid = []
+            margin = 0.5
+            # Inferior part of the "U"
+            avoid += [(x, y) for x in np.arange(-1.2, 1.2, 0.1) for y in np.arange(-0.2 - margin, -0.2 + margin, 0.1)]
+            # Superior part of the "U"
+            avoid += [(x, y) for x in np.arange(-1.0 - margin, -1.0 + margin, 0.1) for y in np.arange(0.6, 0.6 + 1.2, 0.1)]
+            # Right part of the "U"
+            avoid += [(x, y) for x in np.arange(1.0 - margin, 1.0 + margin, 0.1) for y in np.arange(0.6, 0.6 + 1.2, 0.1)]
+            # Chooses randomly an spawn point, with higher weights for open and medium complexity areas
+            choices = random.choices([open_areas, medium_areas, complex_areas], weights=[0.4, 0.4, 0.3], k=1)[0]
+            selected_point = random.choice(choices)
+
+            while selected_point in avoid:
+                selected_point = random.choice(choices)
+            return selected_point
+            # Old way: Pre-defined set of areas
+            # areas = [(0.4, 0.4), (0.2, 1.9), (2, -0.2), (-1.5, 1.5), (1.8, -1.5), (-1.7, 0), (-1.8, -1.8), (-0.5, -1.8)]
+            # return random.choice(areas)
+        
         elif stage == 4:
             # More complex set of points
             points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5), (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2), (-1.8, -1.8)]
