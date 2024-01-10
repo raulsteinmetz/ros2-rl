@@ -273,11 +273,12 @@ class Env(Node):
         
         elif stage == 3:
             open_areas = [(0.4, 0.4), (1.9, -1), (0, -1.5), (-1.5, 0)]
-            medium_areas = [(0.8, 1.7), (0.2, 1.9), (-1.5, -1.5), (-1.2, -1.2)]
+            moderate_areas = [(0.8, 1.7), (0.2, 1.9), (-1.5, -1.5), (-1.2, -1.2)]
             complex_areas = [(-1.8, 1.5), (-1.5, 1.8), (1.9, 0.4), (-1.7, -1.9)]
 
             avoid = []
             margin = 0.5
+            # Define the area around each obstacle based on its dimensions and positions
             # Inferior part of the "U"
             avoid += [(x, y) for x in np.arange(-1.2, 1.2, 0.1) for y in np.arange(-0.2 - margin, -0.2 + margin, 0.1)]
             # Superior part of the "U"
@@ -285,7 +286,7 @@ class Env(Node):
             # Right part of the "U"
             avoid += [(x, y) for x in np.arange(1.0 - margin, 1.0 + margin, 0.1) for y in np.arange(0.6, 0.6 + 1.2, 0.1)]
             # Chooses randomly an spawn point, with higher weights for open and medium complexity areas
-            choices = random.choices([open_areas, medium_areas, complex_areas], weights=[0.4, 0.4, 0.3], k=1)[0]
+            choices = random.choices([open_areas, moderate_areas, complex_areas], weights=[0.4, 0.4, 0.3], k=1)[0]
             selected_point = random.choice(choices)
 
             while selected_point in avoid:
@@ -296,9 +297,39 @@ class Env(Node):
             # return random.choice(areas)
         
         elif stage == 4:
-            # More complex set of points
-            points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5), (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2), (-1.8, -1.8)]
-            return random.choice(points)
+            open_areas = [(1.7, 0), (1.7, -0.8), (1.7, -1.7), (0.8, -1.5), (0, -1), (-0.4, -2), (-1.8, -1.8)]
+            moderate_areas = [(0.5, 1), (0, 0.8), (-0.4, 0.5)]
+            complex_areas = [(-1.5, 1.5), (-1.7, 0), (-1.5, -1.5)]
+        
+            avoid = []
+            margin = 0.5
+            
+            # Define the area around each obstacle based on its dimensions and positions
+            # single wall
+            avoid += [(x, y) for x in np.arange(-0.6, 0.6, 0.1) for y in np.arange(1.7 - margin, 1.7 + margin, 0.1)]
+
+            # little square
+            avoid += [(x, y) for x in np.arange(-0.2 - margin, -0.2 + margin, 0.1) for y in np.arange(-1.45 - margin, -1.45 + margin, 0.1)]
+
+            # composite wall 1
+            avoid += [(x, y) for x in np.arange(-0.2 - margin, -0.2 + margin, 0.1) for y in np.arange(-0.2 - margin, -0.2 + margin, 0.1)]
+
+            # composite wall 2
+            avoid += [(x, y) for x in np.arange(-0.8 - margin, -0.8 + margin, 0.1) for y in np.arange(0, 0, 0.1)]  # Adjust if needed
+
+            # composite wall 3
+            avoid += [(x, y) for x in np.arange(0.6 - margin, 0.6 + margin, 0.1) for y in np.arange(-0.33 - margin, -0.33 + margin, 0.1)]
+
+            choices = random.choices([open_areas, moderate_areas, complex_areas], weights=[0.5, 0.3, 0.2], k=1)[0]
+            selected_point = random.choice(choices)
+
+            while selected_point in avoid:
+                selected_point = random.choice(choices)
+            return selected_point
+
+            # Old way: More complex set of points
+            # points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5), (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2), (-1.8, -1.8)]
+            # return random.choice(points)
 
     def handle_spawn_result(self, future, fixed_z):
         """
