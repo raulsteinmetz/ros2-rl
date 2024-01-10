@@ -185,17 +185,41 @@ class Env(Node):
                 self.target_x = random.uniform(1.60, 1.90)
                 self.target_y = random.uniform(1.60, 1.90)
         elif stage == 3:
-            areas = [(0.4, 0.4), (0.8, 1.7), (0.2, 1.9), (1.9, 0.4), (1.9, -1), (1.9, -1.9), 
-                     (0.5, -1.9), (-1.8, 1.5), (-1.5, 1.8), (-1.5, -1.5), (-1.2, -1.2), 
-                     (-1.5, 0), (0, -1.5), (0.5, 1), (0.8, 8.8), (0.4, 1.9), (-1.7, -1.9),
-                     (1.4, 1.9), (1, 1.9), (0.2, 1.9), (0.3, 1.9), (0.4, 1.9), (0.5, 1.9),
-                     (0, 1.9), (-0.5, 1.9), (-0.8, 1.9), (-1.5, 1.9), (-1.7, 1.9), (-1.3, 1.9),
-                     (-1, 2.0), (2.0, -1.5), (2.0, -1.2), (2.0, -1), (2.0, -0.8), (2.0, -1.8),
-                     (1.5, -1.8), (1.2, -1.8), (1.0, -1.8),(0.0, -1.8), (-0.5, -1.8),
-                     (-1.5, -1.8), (-1.8, -1.5), (-1.7, -1.7), (-1.5, -1.9), (-1.9, -1.2),
-                     (1.9, -1.5), (1.9, -1.2),(1.9, -0.5),(1.9, -0.8),(1.9, -0.8),(1.9, 0.5)]
-            chosen_point = random.choice(areas)
-            self.target_x, self.target_y = chosen_point
+            open_areas = [(0.4, 0.4), (1.9, -1), (0, -1.5), (-1.5, 0)]
+            medium_areas = [(0.8, 1.7), (0.2, 1.9), (-1.5, -1.5), (-1.2, -1.2)]
+            complex_areas = [(-1.8, 1.5), (-1.5, 1.8), (1.9, 0.4), (-1.7, -1.9)]
+
+            avoid = []
+            margin = 0.5
+
+            # inferior part of the "U"
+            avoid += [(x, y) for x in np.arange(-1.2, 1.2, 0.1) for y in np.arange(-0.2 - margin, -0.2 + margin, 0.1)]
+
+            # superior part of the "U"
+            avoid += [(x, y) for x in np.arange(-1.0 - margin, -1.0 + margin, 0.1) for y in np.arange(0.6, 0.6 + 1.2, 0.1)]
+
+            # right part of the "U"
+            avoid += [(x, y) for x in np.arange(1.0 - margin, 1.0 + margin, 0.1) for y in np.arange(0.6, 0.6 + 1.2, 0.1)]
+
+            # Escolha uma área aleatoriamente, com maior peso para áreas abertas e moderadas
+            choices = random.choices([open_areas, medium_areas, complex_areas], weights=[0.4, 0.4, 0.3], k=1)[0]
+            selected_point = random.choice(choices)
+
+            while selected_point in avoid:
+                selected_point = random.choice(choices)
+
+            self.target_x, self.target_y = selected_point
+            # areas = [(0.4, 0.4), (0.8, 1.7), (0.2, 1.9), (1.9, 0.4), (1.9, -1), (1.9, -1.9), 
+            #          (0.5, -1.9), (-1.8, 1.5), (-1.5, 1.8), (-1.5, -1.5), (-1.2, -1.2), 
+            #          (-1.5, 0), (0, -1.5), (0.5, 1), (0.8, 8.8), (0.4, 1.9), (-1.7, -1.9),
+            #          (1.4, 1.9), (1, 1.9), (0.2, 1.9), (0.3, 1.9), (0.4, 1.9), (0.5, 1.9),
+            #          (0, 1.9), (-0.5, 1.9), (-0.8, 1.9), (-1.5, 1.9), (-1.7, 1.9), (-1.3, 1.9),
+            #          (-1, 2.0), (2.0, -1.5), (2.0, -1.2), (2.0, -1), (2.0, -0.8), (2.0, -1.8),
+            #          (1.5, -1.8), (1.2, -1.8), (1.0, -1.8),(0.0, -1.8), (-0.5, -1.8),
+            #          (-1.5, -1.8), (-1.8, -1.5), (-1.7, -1.7), (-1.5, -1.9), (-1.9, -1.2),
+            #          (1.9, -1.5), (1.9, -1.2),(1.9, -0.5),(1.9, -0.8),(1.9, -0.8),(1.9, 0.5)]
+            # chosen_point = random.choice(areas)
+            # self.target_x, self.target_y = chosen_point
         elif stage == 4:
             points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5),
                       (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), 
