@@ -1,6 +1,6 @@
 import rclpy
-from turtle_env.turtle_env import Trainer
-from ddpg.ddpg_torch import Agent
+from training.trainer import Trainer
+from networks.ddpg.ddpg_torch import Agent
 
 
 def main(args=None):
@@ -23,8 +23,8 @@ def main(args=None):
     fc2_dims = 300
     num_actions = num_actions
 
-    agent = Agent(alpha, beta, [input_dims], tau, batch_size=64, fc1_dims=400, fc2_dims=300, n_actions=num_actions)
-    trainer.train(agent, 5000, 500, True)
+    agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=64, fc1_dims=400, fc2_dims=300, n_actions=num_actions)
+    trainer.train(agent, 5000, 250, True)
     trainer.kill_env()
     rclpy.shutdown()
 
