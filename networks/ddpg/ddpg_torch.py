@@ -8,8 +8,8 @@ from networks.util.buffer import ReplayBuffer
 
 class Agent:
     def __init__(self, alpha=0.0001, beta=0.001, tau=0.001, n_actions=0, input_dims=0,
-                 gamma=0.99, max_size=1000000, fc1_dims=400, fc2_dims=300, 
-                 batch_size=64, max_action=0, min_action=0, checkpoint_dir='tmp/ddpg'):
+                 gamma=0.99, max_size=100000, fc1_dims=400, fc2_dims=300, 
+                 batch_size=128, max_action=0, min_action=0, checkpoint_dir='tmp/ddpg'):
         """
         Initialize the Agent.
 

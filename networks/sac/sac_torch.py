@@ -7,7 +7,7 @@ from networks.sac.networks import ActorNetwork, CriticNetwork, ValueNetwork
 
 class Agent:
     def __init__(self, alpha=0.0003, beta=0.0003, input_dims=0, max_action=0, 
-                 gamma=0.99, n_actions=2, max_size=50000, tau=0.001, batch_size=64,
+                 gamma=0.99, n_actions=2, max_size=100000, tau=0.001, batch_size=128,
                  reward_scale=1, min_action=0, checkpoint_dir='tmp/sac'):
         """
         Initialize the Soft Actor-Critic agent.
