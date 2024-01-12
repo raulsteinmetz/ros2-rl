@@ -8,8 +8,8 @@ from networks.util.buffer import ReplayBuffer
 
 class Agent:
     def __init__(self, alpha=0.0001, beta=0.001, tau=0.001, n_actions=0, input_dims=0,
-                 gamma=0.99, max_size=1000000, fc1_dims=400, fc2_dims=300, 
-                 batch_size=64, max_action=0, min_action=0, checkpoint_dir='tmp/ddpg'):
+                 gamma=0.99, max_size=1000000, fc1_dims=400, fc2_dims=300, V_MIN=-5, V_MAX=5, N_ATOMS=51,
+                 batch_size=64, max_action=0, min_action=0, checkpoint_dir='tmp/d4pg'):
         """
         Initialize the Agent.
 
@@ -27,6 +27,9 @@ class Agent:
             max_action (float): Maximum action value.
             min_action (float): Minimum action value.
             checkpoint_dir (str): Directory for saving checkpoints.
+            V_MIN (float): Minimum value of the support for the value distribution.
+            V_MAX (float): Maximum value of the support for the value distribution.
+            N_ATOMS (int): Number of atoms in the value distribution.
         """
         self.gamma = gamma
         self.tau = tau
@@ -44,6 +47,10 @@ class Agent:
         self.target_critic = CriticNetwork(beta, input_dims, fc1_dims, fc2_dims, n_actions, 'target_critic', checkpoint_dir)
 
         self.update_network_parameters(tau=1)
+
+        self.N_ATOMS = N_ATOMS
+        self.V_MIN = V_MIN
+        self.V_MAX = V_MAX
 
     def choose_action(self, observation):
         """
@@ -116,7 +123,7 @@ class Agent:
             target_atoms = T.linspace(self.V_MIN, self.V_MAX, self.N_ATOMS).to(self.actor.device)
             delta_z = (self.V_MAX - self.V_MIN) / (self.N_ATOMS - 1)
             
-            Tz = rewards.unsqueeze(1) + self.gamma * (1 - dones.unsqueeze(1)) * target_atoms.unsqueeze(0)
+            Tz = rewards.unsqueeze(1) + self.gamma * (1 - done.unsqueeze(1).float()) * target_atoms.unsqueeze(0)
             Tz = Tz.clamp(min=self.V_MIN, max=self.V_MAX)
             b = (Tz - self.V_MIN) / delta_z
             lower = b.floor().long()
@@ -125,8 +132,11 @@ class Agent:
             m = states.new_zeros(self.batch_size, self.N_ATOMS)
             offset = T.linspace(0, (self.batch_size - 1) * self.N_ATOMS, self.batch_size).unsqueeze(1).expand(self.batch_size, self.N_ATOMS).long()
             
+            offset = offset.to(self.actor.device)
+            lower = lower.to(self.actor.device)
+            upper = upper.to(self.actor.device)
+
             m.view(-1).index_add_(0, (lower + offset).view(-1), (target_distr * (upper.float() - b)).view(-1))
-            m.view(-1).index_add_(0, (upper + offset).view(-1), (target_distr * (b - lower.float())).view(-1))
 
         # Critic update
         critic_distr = self.critic.forward(states, actions)

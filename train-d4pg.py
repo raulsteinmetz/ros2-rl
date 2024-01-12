@@ -5,7 +5,7 @@ from networks.d4pg.d4pg_torch import Agent
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer(algorithm_name='d4pg', stage=4)
+    trainer = Trainer(algorithm_name='d4pg', stage=1)
     num_states = 14
     num_actions = 2
 
@@ -24,7 +24,7 @@ def main(args=None):
     num_actions = num_actions
 
     agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=64, fc1_dims=400, fc2_dims=300, n_actions=num_actions)
-    trainer.train(agent, 5000, 250, True)
+    trainer.train(agent, 5000, 250, False)
     trainer.kill_env()
     rclpy.shutdown()
 

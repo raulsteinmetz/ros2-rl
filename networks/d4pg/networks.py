@@ -47,11 +47,6 @@ class CriticNetwork(nn.Module):
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
-        # D4PG exclusive parameters
-        self.N_ATOMS = 51  # Number of atoms in the distribution
-        self.V_MIN = -2
-        self.V_MAX = 2
-
         # Replace the last layer with a layer outputting N_ATOMS
         self.q = nn.Linear(self.fc2_dims, self.N_ATOMS)
 
