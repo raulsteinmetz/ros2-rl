@@ -109,24 +109,41 @@ class Agent:
         rewards = T.tensor(rewards, dtype=T.float).to(self.actor.device)
         done = T.tensor(done).to(self.actor.device)
 
-        target_actions = self.target_actor.forward(states_)
-        critic_value_ = self.target_critic.forward(states_, target_actions)
-        critic_value = self.critic.forward(states, actions)
+        # Calculate the target distribution
+        with T.no_grad():
+            target_actions = self.target_actor.forward(states_)
+            target_distr = self.target_critic.forward(states_, target_actions)
+            target_atoms = T.linspace(self.V_MIN, self.V_MAX, self.N_ATOMS).to(self.actor.device)
+            delta_z = (self.V_MAX - self.V_MIN) / (self.N_ATOMS - 1)
+            
+            Tz = rewards.unsqueeze(1) + self.gamma * (1 - dones.unsqueeze(1)) * target_atoms.unsqueeze(0)
+            Tz = Tz.clamp(min=self.V_MIN, max=self.V_MAX)
+            b = (Tz - self.V_MIN) / delta_z
+            lower = b.floor().long()
+            upper = b.ceil().long()
+            
+            m = states.new_zeros(self.batch_size, self.N_ATOMS)
+            offset = T.linspace(0, (self.batch_size - 1) * self.N_ATOMS, self.batch_size).unsqueeze(1).expand(self.batch_size, self.N_ATOMS).long()
+            
+            m.view(-1).index_add_(0, (lower + offset).view(-1), (target_distr * (upper.float() - b)).view(-1))
+            m.view(-1).index_add_(0, (upper + offset).view(-1), (target_distr * (b - lower.float())).view(-1))
 
-        critic_value_[done] = 0.0
-        target = rewards + self.gamma * critic_value_.view(-1)
-        target = target.view(self.batch_size, 1)
+        # Critic update
+        critic_distr = self.critic.forward(states, actions)
+        critic_loss = -T.sum(m * T.log(critic_distr + 1e-6), dim=1).mean()
 
         self.critic.optimizer.zero_grad()
-        critic_loss = F.mse_loss(target, critic_value)
         critic_loss.backward()
         self.critic.optimizer.step()
 
+        # Actor update
+        actor_loss = -T.mean(T.sum(self.critic.forward(states, self.actor.forward(states)) * target_atoms, dim=1))
+
         self.actor.optimizer.zero_grad()
-        actor_loss = -T.mean(self.critic.forward(states, self.actor.forward(states)))
         actor_loss.backward()
         self.actor.optimizer.step()
 
+        # Update the target networks
         self.update_network_parameters()
 
     def update_network_parameters(self, tau=None):
