@@ -151,7 +151,7 @@ class ActorNetwork(nn.Module):
         self._init_weights()
 
         # Define optimizer
-        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.optimizer = optim.Adam(self.parameters(), lr=alpha, weight_decay=1e-5)
 
         # Set up device for training
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')

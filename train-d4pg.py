@@ -23,7 +23,7 @@ def main(args=None):
     fc2_dims = 300
     num_actions = num_actions
 
-    agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=64, fc1_dims=400, fc2_dims=300, n_actions=num_actions)
+    agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, fc1_dims=400, fc2_dims=300, n_actions=num_actions, max_size=2000000, batch_size=160)
     trainer.train(agent, 5000, 250, False)
     trainer.kill_env()
     rclpy.shutdown()

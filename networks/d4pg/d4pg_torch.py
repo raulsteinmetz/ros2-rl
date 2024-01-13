@@ -7,7 +7,7 @@ from networks.ddpg.noise import OUActionNoise
 from networks.util.buffer import ReplayBuffer
 
 class Agent:
-    def __init__(self, alpha=0.0001, beta=0.001, tau=0.001, n_actions=0, input_dims=0,
+    def __init__(self, alpha=5e-5, beta=0.001, tau=0.001, n_actions=0, input_dims=0,
                  gamma=0.99, max_size=1000000, fc1_dims=400, fc2_dims=300, V_MIN=-5, V_MAX=5, N_ATOMS=51,
                  batch_size=64, max_action=0, min_action=0, checkpoint_dir='tmp/d4pg'):
         """
@@ -65,9 +65,13 @@ class Agent:
         self.actor.eval()
         state = T.tensor([observation], dtype=T.float).to(self.actor.device)
         mu = self.actor.forward(state).to(self.actor.device)
-        mu_prime = mu + T.tensor(self.noise(), dtype=T.float).to(self.actor.device)
+        mu_prime = mu + T.tensor(self.noise(), dtype=T.float).to(self.actor.device) 
         self.actor.train()
 
+        print("Base Action:", mu.cpu().detach().numpy()[0])
+        print("Noise:", T.tensor(self.noise(), dtype=T.float))
+        print("Action with Noise:", mu_prime.cpu().detach().numpy()[0])
+        
         return mu_prime.cpu().detach().numpy()[0]
 
     def remember(self, state, action, reward, state_, done):
@@ -150,8 +154,12 @@ class Agent:
         actor_loss = -T.mean(T.sum(self.critic.forward(states, self.actor.forward(states)) * target_atoms, dim=1))
 
         self.actor.optimizer.zero_grad()
+        actor_loss = -T.mean(self.critic.forward(states, self.actor.forward(states)))
         actor_loss.backward()
+        T.nn.utils.clip_grad_norm_(self.actor.parameters(), 1)
         self.actor.optimizer.step()
+
+        print("Critic Loss:", critic_loss.item(), "Actor Loss:", actor_loss.item())
 
         # Update the target networks
         self.update_network_parameters()
