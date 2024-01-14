@@ -38,10 +38,11 @@ class Agent:
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
         self.noise = OUActionNoise(mu=np.zeros(n_actions))
 
-        self.actor = ActorNetwork(alpha, input_dims, fc1_dims, fc2_dims, n_actions, 'actor', checkpoint_dir)
-        self.critic = CriticNetwork(beta, input_dims, fc1_dims, fc2_dims, n_actions, 'critic', checkpoint_dir)
-        self.target_actor = ActorNetwork(alpha, input_dims, fc1_dims, fc2_dims, n_actions, 'target_actor', checkpoint_dir)
-        self.target_critic = CriticNetwork(beta, input_dims, fc1_dims, fc2_dims, n_actions, 'target_critic', checkpoint_dir)
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.actor = ActorNetwork(alpha, input_dims, fc1_dims, fc2_dims, n_actions, 'actor', checkpoint_dir).to(self.device)
+        self.critic = CriticNetwork(beta, input_dims, fc1_dims, fc2_dims, n_actions, 'critic', checkpoint_dir).to(self.device)
+        self.target_actor = ActorNetwork(alpha, input_dims, fc1_dims, fc2_dims, n_actions, 'target_actor', checkpoint_dir).to(self.device)
+        self.target_critic = CriticNetwork(beta, input_dims, fc1_dims, fc2_dims, n_actions, 'target_critic', checkpoint_dir).to(self.device)
 
         self.update_network_parameters(tau=1)
 

@@ -5,7 +5,7 @@ from networks.ddpg.ddpg_torch import Agent
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer(algorithm_name='ddpg', stage=1)
+    trainer = Trainer(algorithm_name='ddpg', stage=2)
     num_states = 14
     num_actions = 2
 
@@ -23,7 +23,7 @@ def main(args=None):
     fc2_dims = 300
     num_actions = num_actions
 
-    agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=512, fc1_dims=400, fc2_dims=300, n_actions=num_actions, max_size=5000000)
+    agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=256, fc1_dims=400, fc2_dims=300, n_actions=num_actions, max_size=1000000)
     trainer.train(agent, 5000, 250, True)
     trainer.kill_env()
     rclpy.shutdown()
