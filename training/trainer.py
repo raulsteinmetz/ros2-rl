@@ -45,7 +45,7 @@ class Trainer:
 
             print('Episode: ', episode)
 
-            while not done 
+            while not done:
             # and step < max_steps: # TEST: DDPG doesn't necessarily needs a stop
                 action = agent.choose_action(state)
                 reward, done, state_ = self.env.step(action, step, max_steps, discrete, self.stage)
