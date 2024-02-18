@@ -8,9 +8,9 @@ Key Components:
 - Deep Reinforcement Learning: At the core of our project, DRL algorithms enable the Turtlebot3 to learn efficient navigation strategies through trial and error, optimizing its pathfinding abilities over time.
 
 
-To modify DRL stages, you can find the world launch files at: `~/ros2_humble/src/turtlebot3_simulations/turtlebot3_gazebo/world`
+To modify DRL stages, you can find the world launch files at: `~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/world`
 
-They will normally call an obstacle sdf, located at `~/ros2_humble/src/turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_dqn_world/`, just create one folder with a new sdf and call it!
+They will normally call an obstacle sdf, located at `~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_dqn_world/`, just create one folder with a new sdf and call it!
 
 ## Modifying DRL Stages
 
@@ -20,21 +20,21 @@ To modify the Deep Reinforcement Learning (DRL) stages, according to the ones in
 
    - For `launch`:
      ```bash
-     cp -r turtlebot3_gazebo/launch ~/ros2_humble/src/turtlebot3_simulations/turtlebot3_gazebo/launch
+     cp -r turtlebot3_gazebo/launch ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/launch
      ```
    
    - For `models`:
      ```bash
-     cp -r turtlebot3_gazebo/models ~/ros2_humble/src/turtlebot3_simulations/turtlebot3_gazebo/models
+     cp -r turtlebot3_gazebo/models ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/models
      ```
    
    - For `worlds`:
      ```bash
-     cp -r turtlebot3_gazebo/worlds ~/ros2_humble/src/turtlebot3_simulations/turtlebot3_gazebo/worlds
+     cp -r turtlebot3_gazebo/worlds ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/worlds
      ```
 
 2. **Build your project with `colcon build --symlink-install` to apply the changes:**
    ```bash
-   cd ~/ros2_humble/
+   cd ~/ros_humble/
    colcon build --symlink-install
     ```
