@@ -18,7 +18,7 @@ class Trainer:
         self.writer = SummaryWriter(f"runs/{algorithm_name}/{str(stage)}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}")
         self.stage = stage
 
-    def train(self, agent, episodes, max_steps, load_models=False, discrete=False):
+    def train(self, agent, episodes, max_steps, load_models=True, discrete=False):
         """
         Train the agent for a given number of episodes.
 
