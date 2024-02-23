@@ -268,8 +268,8 @@ class Env(Node):
         
         elif stage == 2:
             # More specific areas for spawning
-            areas = [(-1.90, -1.60), (1.60, 1.90)]
-            return (random.uniform(*random.choice(areas)), random.uniform(*random.choice(areas)))
+            tgt_positions = [(-1.7, -1.7), (1.7, -1.7), (-1.7, 1.7), (1.7, 1.7), (0, 1), (1, 0), (-1, 0), (0, -1)]
+            return random.choice(tgt_positions)
         
         elif stage == 3:
             open_areas = [(0.4, 0.4), (1.9, -1), (0, -1.5), (-1.5, 0)]
@@ -297,36 +297,6 @@ class Env(Node):
             # return random.choice(areas)
         
         elif stage == 4:
-            # open_areas = [(1.7, 0), (1.7, -0.8), (1.7, -1.7), (0.8, -1.5), (0, -1), (-0.4, -2), (-1.8, -1.8)]
-            # moderate_areas = [(0.5, 1), (0, 0.8), (-0.4, 0.5)]
-            # complex_areas = [(-1.5, 1.5), (-1.7, 0), (-1.5, -1.5)]
-        
-            # avoid = []
-            # margin = 0.5
-            
-            # # Define the area around each obstacle based on its dimensions and positions
-            # # single wall
-            # avoid += [(x, y) for x in np.arange(-0.6, 0.6, 0.1) for y in np.arange(1.7 - margin, 1.7 + margin, 0.1)]
-
-            # # little square
-            # avoid += [(x, y) for x in np.arange(-0.2 - margin, -0.2 + margin, 0.1) for y in np.arange(-1.45 - margin, -1.45 + margin, 0.1)]
-
-            # # composite wall 1
-            # avoid += [(x, y) for x in np.arange(-0.2 - margin, -0.2 + margin, 0.1) for y in np.arange(-0.2 - margin, -0.2 + margin, 0.1)]
-
-            # # composite wall 2
-            # avoid += [(x, y) for x in np.arange(-0.8 - margin, -0.8 + margin, 0.1) for y in np.arange(0, 0, 0.1)]  # Adjust if needed
-
-            # # composite wall 3
-            # avoid += [(x, y) for x in np.arange(0.6 - margin, 0.6 + margin, 0.1) for y in np.arange(-0.33 - margin, -0.33 + margin, 0.1)]
-
-            # choices = random.choices([open_areas, moderate_areas, complex_areas], weights=[0.5, 0.3, 0.2], k=1)[0]
-            # selected_point = random.choice(choices)
-
-            # while selected_point in avoid:
-            #     selected_point = random.choice(choices)
-            # return selected_point
-
             points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5), (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2), (-1.8, -1.8)]
             return random.choice(points)
 
