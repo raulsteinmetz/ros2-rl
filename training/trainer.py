@@ -92,6 +92,8 @@ class Trainer:
                 plt.title(f'{self.algorithm_name} - Stage {self.stage}')
                 plt.savefig(f'networks/{self.algorithm_name}/acum_rwds_{self.stage}.png')
 
+        return acum_rwds
+
     def kill_env(self):
         """
         Terminate the environment and close the writer.
