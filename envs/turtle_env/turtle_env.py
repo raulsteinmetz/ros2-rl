@@ -267,19 +267,14 @@ class Env(Node):
             self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
             self.target_y = random.uniform(-1.90, 1.90)
         elif stage == 2:
-            area = np.random.randint(0, 4)
-            if area == 0: 
-                self.target_x = random.uniform(-1.90, -1.60)
-                self.target_y = random.uniform(-1.90, -1.60) 
-            elif area == 1:
-                self.target_x = random.uniform(-1.90, -1.60)
-                self.target_y = random.uniform(1.60, 1.90) 
-            elif area == 2:
-                self.target_x = random.uniform(1.60, 1.90)
-                self.target_y = random.uniform(-1.90, -1.60)
-            elif area == 3:
-                self.target_x = random.uniform(1.60, 1.90)
-                self.target_y = random.uniform(1.60, 1.90)
+            tgt_positions = [(-1.7, -1.7), (1.7, -1.7), (-1.7, 1.7), (1.7, 1.7),
+                             (0, 1.5), (1.5, 0), (-1.5, 0), (0, -1.5),
+                             (1, 1.7), (-1, 1.7), (1, -1.7), (-1, -1.7),
+                             (1.7, 1), (1.7, -1), (-1.7, 1), (-1.7, -1),
+                             (1.7, -0.5), (1.7, 0.5), (-1.7, 0.5), (-1.7, -0.5),
+                             (0.5, -1.7), (-0.5, -1.7), (0.5, 1.7), (-0.5, 1.7)]
+            self.target_x, self.target_y = random.choice(tgt_positions)
+            self.target_x, self.target_y = (-0.5, 1.7)
         elif stage == 3:
             area = np.random.randint(0, 3)
             if area == 0:
