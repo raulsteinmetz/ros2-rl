@@ -314,6 +314,8 @@ class RobotControllerNode(Node):
                 with self.tensorboard_writer as writer:
                     writer.add_scalar('Acumulated Reward', acum_reward, global_step=episode)
                     writer.add_scalar('Moving Average Rewards', mov_avg_rwds[-1], global_step=episode)
+            with self.tensorboard_writer as writer:
+                writer.add_scalar('Episode Reward', reward, global_step=episode)
         self.tensorboard_writer.close()
         return
 
