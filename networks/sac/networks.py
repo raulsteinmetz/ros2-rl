@@ -71,7 +71,7 @@ class CriticNetwork(nn.Module):
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, beta, input_dims, fc1_dims=512, fc2_dims=512, name='value', chkpt_dir='tmp/sac'):
+    def __init__(self, beta, input_dims, fc1_dims=400, fc2_dims=300, name='value', chkpt_dir='tmp/sac'):
         """
         Initialize the ValueNetwork.
 
@@ -132,7 +132,7 @@ class ValueNetwork(nn.Module):
 
 
 class ActorNetwork(nn.Module):
-    def __init__(self, alpha, input_dims, max_action, fc1_dims=150, fc2_dims=256, n_actions=2, name='actor', chkpt_dir='tmp/sac'):
+    def __init__(self, alpha, input_dims, max_action, fc1_dims=400, fc2_dims=300, n_actions=2, name='actor', chkpt_dir='tmp/sac'):
         """
         Initialize the ActorNetwork.
 

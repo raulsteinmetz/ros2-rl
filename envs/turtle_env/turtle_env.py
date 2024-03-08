@@ -275,16 +275,17 @@ class Env(Node):
                              (0.5, -1.7), (-0.5, -1.7), (0.5, 1.7), (-0.5, 1.7)]
             self.target_x, self.target_y = random.choice(tgt_positions)
         elif stage == 3:
-            area = np.random.randint(0, 3)
-            if area == 0:
-                self.target_x = random.uniform(-1.8, -1.9)
-                self.target_y = random.uniform(-1.9, 1.9)
-            elif area == 1:
-                self.target_x = random.uniform(-1.9, 1.9)
-                self.target_y = random.uniform(-1.8, -1.9)
-            elif area == 2:
-                self.target_x = random.uniform(1.9, 1.1)
-                self.target_y = random.uniform(0.4, 1.1)
+            areas = [(0.4, 0.4), (0.8, 1.7), (0.2, 1.9), (1.9, 0.4), (1.9, -1), (1.9, -1.9), 
+                        (0.5, -1.9), (-1.8, 1.5), (-1.5, 1.8), (-1.5, -1.5), (-1.2, -1.2), 
+                        (-1.5, 0), (0, -1.5), (0.5, 1), (0.8, 8.8), (0.4, 1.9), (-1.7, -1.9),
+                        (1.4, 1.9), (1, 1.9), (0.2, 1.9), (0.3, 1.9), (0.4, 1.9), (0.5, 1.9),
+                        (0, 1.9), (-0.5, 1.9), (-0.8, 1.9), (-1.5, 1.9), (-1.7, 1.9), (-1.3, 1.9),
+                        (-1, 2.0), (2.0, -1.5), (2.0, -1.2), (2.0, -1), (2.0, -0.8), (2.0, -1.8),
+                        (1.5, -1.8), (1.2, -1.8), (1.0, -1.8),(0.0, -1.8), (-0.5, -1.8),
+                        (-1.5, -1.8), (-1.8, -1.5), (-1.7, -1.7), (-1.5, -1.9), (-1.9, -1.2),
+                        (1.9, -1.5), (1.9, -1.2),(1.9, -0.5),(1.9, -0.8),(1.9, -0.8),(1.9, 0.5)]
+            chosen_point = random.choice(areas)
+            self.target_x, self.target_y = chosen_point
         elif stage == 4:
             area = np.random.randint(0, 3)
             if area == 0:
