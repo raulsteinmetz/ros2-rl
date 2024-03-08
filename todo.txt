@@ -1,8 +1,19 @@
+ADD SEED TO NUMPY RANDOMIZATION FOR REPRODUCIBILITY!!!!
 add model based networks
-retrain ddpg on 1 with new fc size
+ideia: reduzir velocidade no choose_action da ddpg (muultiplicar retuurn por 0.algo) para diminuir comportamento erratico
 ideia: aumentar target no começo
 ideia: reward negativa por andar demais (pega a velocidade das rodas e multiplica por um peso pequeno)
 ideia: talvez voltar na ideia da reward de acordo com a distancia
 
+ideia: mudar o upper e lower bound do env, que deveria clipar pra esses values no chose_action,
+mas na ddpg n faz! talvez é interessante explorar isso!
 
-functioning -> https://github.com/raulsteinmetz/ros2-rl/blob/4f9ae987159bf2155279ffce81bb96a4321e68f5/turtle_env/turtle_env.py
+env.py
+    def init_properties(self):
+        """
+        Initialize the properties of the environment.
+        """
+        self.num_states = 14
+        self.num_actions = 2
+        self.action_upper_bound = .25
+        self.action_lower_bound = -.25

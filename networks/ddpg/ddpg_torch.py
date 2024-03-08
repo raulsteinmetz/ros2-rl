@@ -63,6 +63,7 @@ class Agent:
         self.actor.train()
 
         return mu_prime.cpu().detach().numpy()[0]
+        # maybe multiplying the returned action by 0.5 will diminish the erratic behaviour
 
     def remember(self, state, action, reward, state_, done):
         """
