@@ -10,23 +10,15 @@ def main(args=None):
     num_states = 14
     num_actions = 2
 
-    upper_bound = .25
-    lower_bound = -.25
-    ACTION_V_MAX = 0.22 # m/s
-    ACTION_W_MAX = 1. # rad/s
 
     alpha = 0.0001
     beta = 0.001
-    input_dims = num_states
     tau = 0.001
-    batch_size = 64
-    fc1_dims = 400
-    fc2_dims = 300
     num_actions = num_actions
 
     # stage - 1 & 2: batch_size=256, max_size=1000000
     agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=256, fc1_dims=150, fc2_dims=256, n_actions=num_actions, max_size=2000000)
-    scores = trainer.train(agent, 3000, 140, False)
+    scores = trainer.train(agent, 5000, 140, False)
     trainer.kill_env()
     rclpy.shutdown()
 
