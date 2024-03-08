@@ -1,2 +1,8 @@
 add model based networks
 retrain ddpg on 1 with new fc size
+ideia: aumentar target no começo
+ideia: reward negativa por andar demais (pega a velocidade das rodas e multiplica por um peso pequeno)
+ideia: talvez voltar na ideia da reward de acordo com a distancia
+
+
+functioning -> https://github.com/raulsteinmetz/ros2-rl/blob/4f9ae987159bf2155279ffce81bb96a4321e68f5/turtle_env/turtle_env.py

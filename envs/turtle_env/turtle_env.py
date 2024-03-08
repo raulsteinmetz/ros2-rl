@@ -274,7 +274,6 @@ class Env(Node):
                              (1.7, -0.5), (1.7, 0.5), (-1.7, 0.5), (-1.7, -0.5),
                              (0.5, -1.7), (-0.5, -1.7), (0.5, 1.7), (-0.5, 1.7)]
             self.target_x, self.target_y = random.choice(tgt_positions)
-            self.target_x, self.target_y = (-0.5, 1.7)
         elif stage == 3:
             area = np.random.randint(0, 3)
             if area == 0:
