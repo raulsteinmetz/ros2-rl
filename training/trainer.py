@@ -62,11 +62,12 @@ class Trainer:
 
             print(f"Episode * {episode} * Accumulated Reward is ==> {acum_reward}")
             acum_rwds.append(acum_reward)
-
             # Log metrics to tensorboard
-            if loss is not None:
+            if loss is not None: 
                 self.writer.add_scalar('Loss', loss, episode)
             self.writer.add_scalar('Accumulated Reward', acum_reward, episode)
+            self.writer.add_scalar('Reward on episode', reward, episode)
+
 
             # Compute and record moving average
             if episode >= N - 1:
