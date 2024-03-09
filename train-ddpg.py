@@ -17,13 +17,8 @@ def main(args=None):
     num_actions = num_actions
 
     # stage - 1 & 2: batch_size=256, max_size=1000000
-<<<<<<< HEAD
     agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=256, fc1_dims=150, fc2_dims=256, n_actions=num_actions, max_size=2000000)
     scores = trainer.train(agent, 3000, 250, False)
-=======
-    agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=512, fc1_dims=400, fc2_dims=300, n_actions=num_actions, max_size=2000000)
-    scores = trainer.train(agent, 5000, 500, True)
->>>>>>> f8c64456a69aa311d4f728fefc4521c95d47690b
     trainer.kill_env()
     rclpy.shutdown()
 
