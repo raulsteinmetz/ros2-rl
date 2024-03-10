@@ -2,3 +2,5 @@ add model based networks
 ideia: aumentar target no começo
 ideia: reward negativa por andar demais (pega a velocidade das rodas e multiplica por um peso pequeno)
 ideia: talvez voltar na ideia da reward de acordo com a distancia
+correcao: targets do stage_4 estao dando respawn em cima das paredes.
+correcao: em alguns raros casos, mesmo depois de corrigido previamente, o target ainda não dá respawn.
