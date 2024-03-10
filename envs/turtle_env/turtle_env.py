@@ -33,6 +33,10 @@ class Env(Node):
         Initialize the environment node.
         """
         super().__init__("trainer_node")
+
+        # seed for reproducibility
+        np.random.seed(42)
+
         # Setup publishers and subscribers
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 1)
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 1)
@@ -42,6 +46,7 @@ class Env(Node):
         self.reset_client = self.create_client(Empty, '/reset_simulation')
         self.get_entity_state_client = self.create_client(GetEntityState, '/demo/get_entity_state')
         self.set_entity_state_client = self.create_client(SetEntityState, '/demo/set_entity_state')
+        
 
         self.reset_info()
         self.init_properties()
@@ -263,27 +268,29 @@ class Env(Node):
         :return: A tuple (x, y) representing the target's position.
         """
 
-        # seed for reproducibility
-        np.random.seed(42)
-
         # generate random position for the target mark
         if stage == 1:
             self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
             self.target_y = random.uniform(-1.90, 1.90)
         elif stage == 2:
-            area = np.random.randint(0, 4)
+            area = np.random.randint(0, 5)
             if area == 0: 
-                self.target_x = random.uniform(-1.90, -1.60)
-                self.target_y = random.uniform(-1.90, -1.60) 
+                self.target_x = random.uniform(-1.90, 1.90)
+                self.target_y = random.uniform(-1.5, -1.9) 
             elif area == 1:
-                self.target_x = random.uniform(-1.90, -1.60)
-                self.target_y = random.uniform(1.60, 1.90) 
+                self.target_x = random.uniform(-1.90, 1.90)
+                self.target_y = random.uniform(1.5, 1.9) 
             elif area == 2:
-                self.target_x = random.uniform(1.60, 1.90)
-                self.target_y = random.uniform(-1.90, -1.60)
+                self.target_x = random.uniform(1.5, 1.9)
+                self.target_y = random.uniform(-1.90, 1.90)
             elif area == 3:
-                self.target_x = random.uniform(1.60, 1.90)
-                self.target_y = random.uniform(1.60, 1.90)
+                self.target_x = random.uniform(-1.5, -1.9)
+                self.target_y = random.uniform(-1.90, 1.90)
+            elif area == 4:
+                self.target_x = random.uniform(-1.2, 1.2)
+                self.target_y = random.uniform(-1.2, 1.2)
+
+
         elif stage == 3:
             areas = [(0.4, 0.4), (0.8, 1.7), (0.2, 1.9), (1.9, 0.4), (1.9, -1), (1.9, -1.9), 
                         (0.5, -1.9), (-1.8, 1.5), (-1.5, 1.8), (-1.5, -1.5), (-1.2, -1.2), 
