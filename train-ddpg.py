@@ -6,7 +6,7 @@ import pandas as pd
 
 def main(args=None):
     rclpy.init(args=args)
-    trainer = Trainer(algorithm_name='ddpg', stage=2)
+    trainer = Trainer(algorithm_name='ddpg', stage=4)
     num_states = 14
     num_actions = 2
 
@@ -18,7 +18,7 @@ def main(args=None):
 
     # stage - 1 & 2: batch_size=256, max_size=1000000
     agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=256, fc1_dims=150, fc2_dims=256, n_actions=num_actions, max_size=2000000)
-    scores = trainer.train(agent, 3000, 250, False)
+    scores = trainer.train(agent, 5000, 250, False)
     trainer.kill_env()
     rclpy.shutdown()
 
