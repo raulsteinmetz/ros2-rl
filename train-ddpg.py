@@ -18,7 +18,7 @@ def main(args=None):
 
     # stage - 1 & 2: batch_size=256, max_size=1000000
     agent = Agent(alpha, beta, tau, input_dims=trainer.env.num_states, batch_size=512, fc1_dims=400, fc2_dims=300, n_actions=num_actions, max_size=2000000)
-    scores = trainer.train(agent, 10000, 250, True)
+    scores = trainer.train(agent, 5000, 250, False)
     trainer.kill_env()
     rclpy.shutdown()
 
