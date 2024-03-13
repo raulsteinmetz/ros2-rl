@@ -34,8 +34,6 @@ class Env(Node):
         """
         super().__init__("trainer_node")
 
-        # seed for reproducibility
-        np.random.seed(42)
 
         # Setup publishers and subscribers
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 1)
