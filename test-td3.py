@@ -16,8 +16,8 @@ def main(args=None):
             input_dims=tester.env.num_states, tau=0.005,
             max_action=tester.env.action_upper_bound, min_action=tester.env.action_lower_bound,
             batch_size=64, layer1_size=150, layer2_size=256, # 400, 300
-            n_actions=tester.env.num_actions, update_actor_interval=2)
-    scores = tester.test(agent, 100, 250, load_models=False, warmup=20)
+            n_actions=tester.env.num_actions, update_actor_interval=8)
+    scores = tester.test(agent, 100, 250, load_models=True, warmup=20)
     tester.kill_env()
     rclpy.shutdown()
 
