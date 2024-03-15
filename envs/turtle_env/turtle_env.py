@@ -18,6 +18,8 @@ from envs.turtle_env.target import generate_target_sdf
 from gazebo_msgs.srv import SpawnEntity, DeleteEntity, GetEntityState, SetEntityState
 from torch.utils.tensorboard import SummaryWriter
 
+# todo ADD STEP COUNTER
+
 REACH_TRESHOLD = 0.3
 LIDAR_DISCRETIZATION = 10
 LIDAR_MAX_RANGE = 3.5
