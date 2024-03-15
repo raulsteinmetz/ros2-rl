@@ -5,7 +5,7 @@ class PredictEnv:
     def __init__(self, model):
         self.model = model
 
-    def _termination_fn(self, obs, act, next_obs): # not working yet
+    def _termination_fn(self, obs, act, next_obs):
         # Assume next_obs has shape [100000, 14]
         # Check if any of the first 10 lidar readings in each observation are below 0.19
         lidar_condition = np.any(next_obs[:, :10] < 0.19, axis=1)
@@ -46,7 +46,7 @@ class PredictEnv:
         inputs = np.concatenate((obs, act), axis=-1)
         ensemble_model_means, ensemble_model_vars = self.model.predict(inputs)
         ensemble_model_means[:, :, 1:] += obs
-        ensemble_model_stds = np.sqrt(ensemble_model_vars)
+        ensemble_model_stds = np.sqrt(ensemble_model_vars)  
 
         if deterministic:
             ensemble_samples = ensemble_model_means
@@ -64,10 +64,9 @@ class PredictEnv:
         log_prob, dev = self._get_logprob(samples, ensemble_model_means, ensemble_model_vars)
 
         rewards, next_obs = samples[:, :1], samples[:, 1:]
-        terminals = self._termination_fn(obs, act, next_obs)
+        _terminals = self._termination_fn(obs, act, next_obs)
+        terminals = np.array([[element] for element in _terminals])
 
-        print(len(terminals))
-        print(terminals[:5])
 
         batch_size = model_means.shape[0]
 
