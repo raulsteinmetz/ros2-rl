@@ -5,7 +5,7 @@ class PredictEnv:
     def __init__(self, model):
         self.model = model
 
-    def _termination_fn(self, obs, act, next_obs):
+    def _termination_fn(self, obs, act, next_obs): # missing step limit
         # Assume next_obs has shape [100000, 14]
         # Check if any of the first 10 lidar readings in each observation are below 0.19
         lidar_condition = np.any(next_obs[:, :10] < 0.19, axis=1)
