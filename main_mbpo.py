@@ -106,7 +106,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
                     cur_state, action, next_state, reward, done = env_sampler.sample(agent, eval_t=True)
                     sum_reward += reward
                     test_step += 1
-                logging.info("Step Reward: " + str(total_step) + " " + str(sum_reward))
+                print("Step Reward: " + str(total_step) + " " + str(sum_reward))
 
 
 def exploration_before_start(args, env_sampler, env_pool, agent):

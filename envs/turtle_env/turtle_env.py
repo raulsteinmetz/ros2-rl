@@ -18,7 +18,6 @@ from envs.turtle_env.target import generate_target_sdf
 from gazebo_msgs.srv import SpawnEntity, DeleteEntity, GetEntityState, SetEntityState
 from torch.utils.tensorboard import SummaryWriter
 
-# todo ADD STEP COUNTER
 
 REACH_TRESHOLD = 0.3
 LIDAR_DISCRETIZATION = 10
@@ -66,6 +65,8 @@ class Env(Node):
         self.num_actions = 2
         self.action_upper_bound = .25
         self.action_lower_bound = -.25
+
+        self.step_counter = 0
 
     def odom_callback(self, msg):
         """
@@ -127,6 +128,7 @@ class Env(Node):
         :return: The initial state of the environment after reset.
         """
         # Resetting the environment
+        self.step_counter = 0
         req = Empty.Request()
         while not self.reset_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().warn('Reset service not available, waiting again...')
@@ -160,7 +162,7 @@ class Env(Node):
         cmd_vel_msg.angular.z = angular_vel
         self.cmd_vel_publisher.publish(cmd_vel_msg)
 
-    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, steps, max_steps):
+    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps):
         """
         Calculate the reward based on the current state of the environment.
 
@@ -186,7 +188,7 @@ class Env(Node):
         elif np.min(lidar_32) < COLISION_TRESHOLD:
             done = True
             reward = -10
-        elif steps >= (max_steps - 1):
+        elif self.step_counter >= (max_steps - 1):
             done = True
             reward = -10
 
@@ -235,7 +237,7 @@ class Env(Node):
         rclpy.spin_until_future_complete(self, future)
         self.handle_despawn_result(future)
 
-    def step(self, action, step, max_steps_per_episode, discrete, stage):
+    def step(self, action, max_steps_per_episode, discrete, stage):
         """
         Execute a step in the environment based on the given action.
 
@@ -256,7 +258,9 @@ class Env(Node):
         else:
             state_, turtle_x, turtle_y, lidar32 = self.get_state(*self.process_continuous_action(action))
 
-        reward, done = self.get_reward(turtle_x, turtle_y, self.target_x, self.target_y, lidar32, step, max_steps_per_episode)
+        reward, done = self.get_reward(turtle_x, turtle_y, self.target_x, self.target_y, lidar32, max_steps_per_episode)
+
+        self.step_counter += 1
 
         return reward, done, state_
     

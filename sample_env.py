@@ -15,8 +15,8 @@ class EnvSampler():
 
         cur_state = self.current_state
         action = agent.select_action(self.current_state, eval_t)
-        # TODO: send real step and max step so time limit is calculated too
-        reward, terminal, next_state = self.env.step(action, 1, 250, False, self.stage) # return reward, done, state_, args: action, step, max_steps_per_episode, discrete, stage
+        # TODO: parameterize max_step
+        reward, terminal, next_state = self.env.step(action, 250, False, self.stage) # return reward, done, state_, args: action, max_steps_per_episode, discrete, stage
         self.path_length += 1
         self.sum_reward += reward
 
