@@ -5,14 +5,20 @@ class PredictEnv:
     def __init__(self, model):
         self.model = model
 
-    def _termination_fn(self, obs, act, next_obs): # returns if a state is terminal
-        # currently only considering only colision and target reach, not step limit
-        done = False
-        if np.min(next_obs[:10]) < 0.19:
-            done = True
-        elif next_obs[10] < 0.3:
-            done = True
+    def _termination_fn(self, obs, act, next_obs): # not working yet
+        # Assume next_obs has shape [100000, 14]
+        # Check if any of the first 10 lidar readings in each observation are below 0.19
+        lidar_condition = np.any(next_obs[:, :10] < 0.19, axis=1)
 
+        # Check if the distance to the target (11th element) in each observation is below 0.3
+        target_distance_condition = next_obs[:, 10] < 0.3
+
+        # Combine the conditions to determine if an episode is done
+        # An episode is done if either condition is True
+        done = lidar_condition | target_distance_condition
+
+        return done.astype(bool)
+    
     def _get_logprob(self, x, means, variances):
         k = x.shape[-1]
 
@@ -60,7 +66,12 @@ class PredictEnv:
         rewards, next_obs = samples[:, :1], samples[:, 1:]
         terminals = self._termination_fn(obs, act, next_obs)
 
+        print(len(terminals))
+        print(terminals[:5])
+
         batch_size = model_means.shape[0]
+
+        
         return_means = np.concatenate((model_means[:, :1], terminals, model_means[:, 1:]), axis=-1)
         return_stds = np.concatenate((model_stds[:, :1], np.zeros((batch_size, 1)), model_stds[:, 1:]), axis=-1)
 
