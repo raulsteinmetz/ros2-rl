@@ -1,20 +1,12 @@
-import argparse
-import time
 import torch
 import numpy as np
 from itertools import count
 
-import logging
-
-import os
-import os.path as osp
-import json
-
-from sac.replay_memory import ReplayMemory
-from sac.sac import SAC
-from model import EnsembleDynamicsModel
-from predict_env import PredictEnv
-from sample_env import EnvSampler
+from model_based.mbpo.sac.replay_memory import ReplayMemory
+from model_based.mbpo.sac.sac import SAC
+from model_based.mbpo.model import EnsembleDynamicsModel
+from model_based.mbpo.predict_env import PredictEnv
+from model_based.mbpo.sample_env import EnvSampler
 
 from envs.turtle_env.turtle_env import Env
 import rclpy
@@ -22,10 +14,9 @@ from matplotlib import pyplot as plt
 import pandas as pd
 
 
-
 class Hyparams:
-    def __init__(self): # this should be further explored and optimized for turtle task
-        self.seed = 42
+    def __init__(self):
+        self.seed = 42 # reproducibility
         self.use_decay = True
         self.gamma = 0.99
         self.tau = 0.005
@@ -39,33 +30,36 @@ class Hyparams:
         self.num_elites = 5
         self.pred_hidden_size = 200
         self.reward_size = 1
-        self.replay_size = 2000000 # was 1 million
+        self.replay_size = 2000000
         self.model_retain_epochs = 1
-        self.model_train_freq = 125 # was 250
+        self.model_train_freq = 125
         self.rollout_batch_size = 100000
-        self.epoch_length = 500 # was 1000
+        self.epoch_length = 500
         self.rollout_min_epoch = 20
         self.rollout_max_epoch = 150
         self.rollout_min_length = 1
         self.rollout_max_length = 15
-        self.num_epoch = 100 # was 1000
+        self.num_epoch = 100
         self.min_pool_size = 1000
         self.real_ratio = 0.05
         self.train_every_n_steps = 1
         self.num_train_repeat = 20
         self.max_train_repeat_per_step = 5
         self.policy_train_batch_size = 256
-        self.init_exploration_steps = 2000 # was 5000
-        self.max_path_length = 500 # was 1000
+        self.init_exploration_steps = 2000
+        self.max_path_length = 500
         self.cuda = True
+        self.stage = 1
 
 def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
     total_step = 0
-    reward_sum = 0
     rollout_length = 1
     n_steps = args.init_exploration_steps
+
+    # saves training data
     scores = []
     score_steps = []
+
     exploration_before_start(args, env_sampler, env_pool, agent)
 
     for epoch_step in range(args.num_epoch):
@@ -123,8 +117,7 @@ def set_rollout_length(args, epoch_step):
 
 
 def train_predict_model(args, env_pool, predict_env):
-    # Get all samples from environment
-    state, action, reward, next_state, done = env_pool.sample(len(env_pool))
+    state, action, reward, next_state, done = env_pool.sample(len(env_pool)) # samples from real env
     delta_state = next_state - state
     inputs = np.concatenate((state, action), axis=-1)
     labels = np.concatenate((np.reshape(reward, (reward.shape[0], -1)), delta_state), axis=-1)
@@ -147,10 +140,8 @@ def resize_model_pool(args, rollout_length, model_pool):
 def rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length):
     state, action, reward, next_state, done = env_pool.sample_all_batch(args.rollout_batch_size)
     for i in range(rollout_length):
-        # TODO: Get a batch of actions
         action = agent.select_action(state)
         next_states, rewards, terminals = predict_env.step(state, action)
-        # TODO: Push a batch of samples
         model_pool.push_batch([(state[j], action[j], rewards[j], next_states[j], terminals[j]) for j in range(state.shape[0])])
         nonterm_mask = ~terminals.squeeze(-1)
         if nonterm_mask.sum() == 0:
@@ -191,46 +182,43 @@ def train_policy_repeats(args, total_step, train_step, cur_step, env_pool, model
 
 
 def main():
-
+    rclpy.init() # for env ros2 node creation
     hyp = Hyparams()
-    rclpy.init()
-    # turtlebot env
     env = Env()
 
-    # Set random seed
+    # seed for reproducibility
     torch.manual_seed(hyp.seed)
     np.random.seed(hyp.seed)
 
-    # Intial agent
+    # main agent
     agent = SAC(env.num_states, env.num_actions, hyp)
 
-    # Initial ensemble model
-    state_size = np.prod((env.num_states, )) # was env.observation_space.shape
-    action_size = np.prod((env.num_actions, )) # was env.action_space.shape
+    # env model ensemble
+    state_size = np.prod((env.num_states, ))
+    action_size = np.prod((env.num_actions, ))
     env_model = EnsembleDynamicsModel(hyp.num_networks, hyp.num_elites, state_size, action_size, hyp.reward_size, hyp.pred_hidden_size,
                                           use_decay=hyp.use_decay)
-
-    # Predict environments
     predict_env = PredictEnv(env_model)
 
-    # Initial pool for env
-    env_pool = ReplayMemory(hyp.replay_size)
-    # Initial pool for model
+    
+    # env memory
+    env_exp_replay = ReplayMemory(hyp.replay_size)
+
+    # model memory
     rollouts_per_epoch = hyp.rollout_batch_size * hyp.epoch_length / hyp.model_train_freq
     model_steps_per_epoch = int(1 * rollouts_per_epoch)
     new_pool_size = hyp.model_retain_epochs * model_steps_per_epoch
-    model_pool = ReplayMemory(new_pool_size)
+    model_exp_replay = ReplayMemory(new_pool_size)
 
-    # Sampler of environment
-    env_sampler = EnvSampler(env, stage=4, max_path_length=hyp.max_path_length,)
+    # for real env samples
+    env_sampler = EnvSampler(env, stage=hyp.stage, max_path_length=hyp.max_path_length)
 
-    scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_pool, model_pool)
+    # train function
+    scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_exp_replay, model_exp_replay)
 
-    # Create a DataFrame from the scores list
+    # training data
     df = pd.DataFrame({'scores': scores, 'steps':score_steps})
-
-    # Save the DataFrame to a CSV file
-    df.to_csv('./mbpo_scores.csv')
+    df.to_csv('./model_based/mbpo-sac-scores.csv')
 
 
 if __name__ == '__main__':

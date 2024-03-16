@@ -1,6 +1,6 @@
 import rclpy
 from util.trainer import Trainer
-from networks.sac.sac_torch import Agent
+from model_free.sac.sac_torch import Agent
 import pandas as pd
 
 
