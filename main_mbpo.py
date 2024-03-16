@@ -18,12 +18,13 @@ from sample_env import EnvSampler
 
 from envs.turtle_env.turtle_env import Env
 import rclpy
+from matplotlib import pyplot as plt
 
 
 
 class Hyparams:
     def __init__(self): # this should be further explored and optimized for turtle task
-        self.seed = 123456
+        self.seed = 42
         self.use_decay = True
         self.gamma = 0.99
         self.tau = 0.005
@@ -39,14 +40,14 @@ class Hyparams:
         self.reward_size = 1
         self.replay_size = 2000000 # was 1 million
         self.model_retain_epochs = 1
-        self.model_train_freq = 250
+        self.model_train_freq = 75 # was 250
         self.rollout_batch_size = 100000
-        self.epoch_length = 1000 # was 1000
+        self.epoch_length = 300 # was 1000
         self.rollout_min_epoch = 20
         self.rollout_max_epoch = 150
         self.rollout_min_length = 1
         self.rollout_max_length = 15
-        self.num_epoch = 1000 # was 1000
+        self.num_epoch = 1000
         self.min_pool_size = 1000
         self.real_ratio = 0.05
         self.train_every_n_steps = 1
@@ -54,13 +55,15 @@ class Hyparams:
         self.max_train_repeat_per_step = 5
         self.policy_train_batch_size = 256
         self.init_exploration_steps = 2000 # was 5000
-        self.max_path_length = 1000
+        self.max_path_length = 250 # was 1000
         self.cuda = True
 
 def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
     total_step = 0
     reward_sum = 0
     rollout_length = 1
+    scores = []
+    score_steps = []
     exploration_before_start(args, env_sampler, env_pool, agent)
 
     for epoch_step in range(args.num_epoch):
@@ -72,7 +75,9 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
             if cur_step >= args.epoch_length and len(env_pool) > args.min_pool_size:
                 break
 
+            # maybe pause during this
             if cur_step > 0 and cur_step % args.model_train_freq == 0 and args.real_ratio < 1.0:
+                print('... training predict model ...')
                 train_predict_model(args, env_pool, predict_env)
 
                 new_rollout_length = set_rollout_length(args, epoch_step)
@@ -82,7 +87,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
 
                 rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length)
 
-            cur_state, action, next_state, reward, done = env_sampler.sample(agent)
+            cur_state, action, next_state, reward, done = env_sampler.sample(agent) # real step
             env_pool.push(cur_state, action, reward, next_state, done)
 
             if len(env_pool) > args.min_pool_size:
@@ -90,7 +95,10 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
 
             total_step += 1
 
+
+            # testing
             if total_step % args.epoch_length == 0:
+                print('... testing ...')
                 '''
                 avg_reward_len = min(len(env_sampler.path_rewards), 5)
                 avg_reward = sum(env_sampler.path_rewards[-avg_reward_len:]) / avg_reward_len
@@ -106,7 +114,14 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
                     cur_state, action, next_state, reward, done = env_sampler.sample(agent, eval_t=True)
                     sum_reward += reward
                     test_step += 1
-                print("Step Reward: " + str(total_step) + " " + str(sum_reward))
+                print("Score: " + str(sum_reward))
+
+
+                # this is very raw yet, need to do it better
+                scores.append(sum_reward)
+                score_steps.append(total_step)
+                plt.plot(score_steps, scores)
+                plt.savefig('./plot.png')
 
 
 def exploration_before_start(args, env_sampler, env_pool, agent):
@@ -222,7 +237,7 @@ def main():
     model_pool = ReplayMemory(new_pool_size)
 
     # Sampler of environment
-    env_sampler = EnvSampler(env, max_path_length=hyp.max_path_length, stage=1)
+    env_sampler = EnvSampler(env, max_path_length=hyp.max_path_length, stage=2)
 
     train(hyp, env_sampler, predict_env, agent, env_pool, model_pool)
 
