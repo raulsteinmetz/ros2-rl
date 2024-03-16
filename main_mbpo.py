@@ -19,6 +19,7 @@ from sample_env import EnvSampler
 from envs.turtle_env.turtle_env import Env
 import rclpy
 from matplotlib import pyplot as plt
+import pandas as pd
 
 
 
@@ -42,12 +43,12 @@ class Hyparams:
         self.model_retain_epochs = 1
         self.model_train_freq = 75 # was 250
         self.rollout_batch_size = 100000
-        self.epoch_length = 300 # was 1000
+        self.epoch_length = 500 # was 1000
         self.rollout_min_epoch = 20
         self.rollout_max_epoch = 150
         self.rollout_min_length = 1
         self.rollout_max_length = 15
-        self.num_epoch = 1000
+        self.num_epoch = 50 # was 1000
         self.min_pool_size = 1000
         self.real_ratio = 0.05
         self.train_every_n_steps = 1
@@ -62,11 +63,13 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
     total_step = 0
     reward_sum = 0
     rollout_length = 1
+    n_steps = args.init_exploration_steps
     scores = []
     score_steps = []
     exploration_before_start(args, env_sampler, env_pool, agent)
 
     for epoch_step in range(args.num_epoch):
+        print(f'Epoch {epoch_step}')
         start_step = total_step
         train_policy_steps = 0
         for i in count():
@@ -77,6 +80,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
 
             # maybe pause during this
             if cur_step > 0 and cur_step % args.model_train_freq == 0 and args.real_ratio < 1.0:
+                env_sampler.env.pause_simulation()
                 print('... training predict model ...')
                 train_predict_model(args, env_pool, predict_env)
 
@@ -86,42 +90,24 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
                     model_pool = resize_model_pool(args, rollout_length, model_pool)
 
                 rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length)
+                env_sampler.env.unpause_simulation()
 
             cur_state, action, next_state, reward, done = env_sampler.sample(agent) # real step
             env_pool.push(cur_state, action, reward, next_state, done)
+
+            if done == True:
+                scores.append(reward)
+                score_steps.append(n_steps)
 
             if len(env_pool) > args.min_pool_size:
                 train_policy_steps += train_policy_repeats(args, total_step, train_policy_steps, cur_step, env_pool, model_pool, agent)
 
             total_step += 1
+            n_steps += 1
 
+            # there used to be a test code here
 
-            # testing
-            # if total_step % args.epoch_length == 0:
-            #     print('... testing ...')
-            #     '''
-            #     avg_reward_len = min(len(env_sampler.path_rewards), 5)
-            #     avg_reward = sum(env_sampler.path_rewards[-avg_reward_len:]) / avg_reward_len
-            #     logging.info("Step Reward: " + str(total_step) + " " + str(env_sampler.path_rewards[-1]) + " " + str(avg_reward))
-            #     print(total_step, env_sampler.path_rewards[-1], avg_reward)
-            #     '''
-            #     env_sampler.current_state = None
-            #     sum_reward = 0
-            #     done = False
-            #     test_step = 0
-
-            #     while (not done) and (test_step != args.max_path_length):
-            #         cur_state, action, next_state, reward, done = env_sampler.sample(agent, eval_t=True)
-            #         sum_reward += reward
-            #         test_step += 1
-            #     print("Score: " + str(sum_reward))
-
-
-            #     # this is very raw yet, need to do it better
-            #     scores.append(sum_reward)
-            #     score_steps.append(total_step)
-            #     plt.plot(score_steps, scores)
-            #     plt.savefig('./plot.png')
+    return scores, score_steps
 
 
 def exploration_before_start(args, env_sampler, env_pool, agent):
@@ -237,9 +223,15 @@ def main():
     model_pool = ReplayMemory(new_pool_size)
 
     # Sampler of environment
-    env_sampler = EnvSampler(env, max_path_length=hyp.max_path_length, stage=2)
+    env_sampler = EnvSampler(env, stage=4, max_path_length=hyp.max_path_length,)
 
-    train(hyp, env_sampler, predict_env, agent, env_pool, model_pool)
+    scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_pool, model_pool)
+
+    # Create a DataFrame from the scores list
+    df = pd.DataFrame({'scores': scores, 'steps':score_steps})
+
+    # Save the DataFrame to a CSV file
+    df.to_csv('./mbpo_scores.csv')
 
 
 if __name__ == '__main__':

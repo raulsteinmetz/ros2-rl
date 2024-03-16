@@ -45,10 +45,44 @@ class Env(Node):
         self.reset_client = self.create_client(Empty, '/reset_simulation')
         self.get_entity_state_client = self.create_client(GetEntityState, '/demo/get_entity_state')
         self.set_entity_state_client = self.create_client(SetEntityState, '/demo/set_entity_state')
+
+        # pause for mbpo rolout
+        self.pause_simulation_client = self.create_client(Empty, '/pause_physics')
+        self.unpause_simulation_client = self.create_client(Empty, '/unpause_physics')
         
 
         self.reset_info()
         self.init_properties()
+
+    def pause_simulation(self):
+        """
+        Pause the Gazebo simulation.
+        """
+        try:
+            pause_request = Empty.Request()
+            future = self.pause_simulation_client.call_async(pause_request)
+            rclpy.spin_until_future_complete(self, future)
+            if future.result() is not None:
+                self.get_logger().info('Simulation paused successfully.')
+            else:
+                self.get_logger().error('Failed to pause simulation.')
+        except Exception as e:
+            self.get_logger().error('Service call failed %r' % (e,))
+
+    def unpause_simulation(self):
+        """
+        Unpause the Gazebo simulation.
+        """
+        try:
+            unpause_request = Empty.Request()
+            future = self.unpause_simulation_client.call_async(unpause_request)
+            rclpy.spin_until_future_complete(self, future)
+            if future.result() is not None:
+                self.get_logger().info('Simulation unpaused successfully.')
+            else:
+                self.get_logger().error('Failed to unpause simulation.')
+        except Exception as e:
+            self.get_logger().error('Service call failed %r' % (e,))
 
     def reset_info(self):
         """

@@ -1,5 +1,5 @@
 class EnvSampler():
-    def __init__(self, env, max_path_length=1000, stage=1):
+    def __init__(self, env, stage, max_path_length=1000):
         self.env = env
 
         self.path_length = 0
@@ -16,7 +16,7 @@ class EnvSampler():
         cur_state = self.current_state
         action = agent.select_action(self.current_state, eval_t)
         # TODO: parameterize max_step
-        reward, terminal, next_state = self.env.step(action, 250, False, self.stage) # return reward, done, state_, args: action, max_steps_per_episode, discrete, stage
+        reward, terminal, next_state = self.env.step(action, 250, False, self.stage)
         self.path_length += 1
         self.sum_reward += reward
 
