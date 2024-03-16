@@ -8,7 +8,7 @@ import pandas as pd
 def main(args=None):
     network = 'ddpg'
     rclpy.init(args=args)
-    trainer = Trainer(algorithm_name=network, stage=1)
+    trainer = Trainer(algorithm_name=network, stage=2)
     num_states = 14
     num_actions = 2
 
