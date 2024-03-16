@@ -1,12 +1,14 @@
 import rclpy
 from util.trainer import Trainer
+from util.save_csv import save_rewards_scores
 from networks.ddpg.ddpg_torch import Agent
 import pandas as pd
 
 
 def main(args=None):
+    network = 'ddpg'
     rclpy.init(args=args)
-    trainer = Trainer(algorithm_name='ddpg', stage=1)
+    trainer = Trainer(algorithm_name=network, stage=1)
     num_states = 14
     num_actions = 2
 
@@ -22,14 +24,16 @@ def main(args=None):
     trainer.kill_env()
     rclpy.shutdown()
 
-    # Create a DataFrame from the scores list
-    df = pd.DataFrame({'scores': scores, 'steps':steps})
+    save_rewards_scores(scores, steps, network)
 
-    # Add an 'episode' index column
-    df.index.name = 'episode'
+    # # Create a DataFrame from the scores list
+    # df = pd.DataFrame({'scores': scores, 'steps':steps})
 
-    # Save the DataFrame to a CSV file
-    df.to_csv('networks/ddpg/scores.csv')
+    # # Add an 'episode' index column
+    # df.index.name = 'episode'
+
+    # # Save the DataFrame to a CSV file
+    # df.to_csv('networks/ddpg/scores.csv')
 
 if __name__ == '__main__':
     main()
