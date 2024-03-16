@@ -62,12 +62,14 @@ class Trainer:
 
                 step += 1
                 self.n_steps += 1
-
+            
             print(f"Episode * {episode} * Accumulated Reward is ==> {acum_reward}")
+
+            self.writer.add_scalar('Accumulated Reward in episode', acum_reward, episode)
+            self.writer.add_scalar('Steps per Episode', step, episode)
+            self.writer.add_scalar('self.n_steps per episode', self.n_steps, episode)
             acum_rwds.append(acum_reward)
             steps_rwds.append(self.n_steps)
-            self.writer.add_scalar('Accumulated Reward in episode', acum_reward, episode)
-            self.writer.add_scalar('Steps per episode', self.n_steps, episode)
 
             # Log metrics to tensorboard
             if loss is not None:
