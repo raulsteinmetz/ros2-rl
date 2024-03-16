@@ -41,14 +41,14 @@ class Hyparams:
         self.reward_size = 1
         self.replay_size = 2000000 # was 1 million
         self.model_retain_epochs = 1
-        self.model_train_freq = 75 # was 250
+        self.model_train_freq = 125 # was 250
         self.rollout_batch_size = 100000
         self.epoch_length = 500 # was 1000
         self.rollout_min_epoch = 20
         self.rollout_max_epoch = 150
         self.rollout_min_length = 1
         self.rollout_max_length = 15
-        self.num_epoch = 50 # was 1000
+        self.num_epoch = 100 # was 1000
         self.min_pool_size = 1000
         self.real_ratio = 0.05
         self.train_every_n_steps = 1
@@ -56,7 +56,7 @@ class Hyparams:
         self.max_train_repeat_per_step = 5
         self.policy_train_batch_size = 256
         self.init_exploration_steps = 2000 # was 5000
-        self.max_path_length = 250 # was 1000
+        self.max_path_length = 500 # was 1000
         self.cuda = True
 
 def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
@@ -105,7 +105,6 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
             total_step += 1
             n_steps += 1
 
-            # there used to be a test code here
 
     return scores, score_steps
 
