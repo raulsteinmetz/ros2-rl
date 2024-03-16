@@ -97,31 +97,31 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
 
 
             # testing
-            if total_step % args.epoch_length == 0:
-                print('... testing ...')
-                '''
-                avg_reward_len = min(len(env_sampler.path_rewards), 5)
-                avg_reward = sum(env_sampler.path_rewards[-avg_reward_len:]) / avg_reward_len
-                logging.info("Step Reward: " + str(total_step) + " " + str(env_sampler.path_rewards[-1]) + " " + str(avg_reward))
-                print(total_step, env_sampler.path_rewards[-1], avg_reward)
-                '''
-                env_sampler.current_state = None
-                sum_reward = 0
-                done = False
-                test_step = 0
+            # if total_step % args.epoch_length == 0:
+            #     print('... testing ...')
+            #     '''
+            #     avg_reward_len = min(len(env_sampler.path_rewards), 5)
+            #     avg_reward = sum(env_sampler.path_rewards[-avg_reward_len:]) / avg_reward_len
+            #     logging.info("Step Reward: " + str(total_step) + " " + str(env_sampler.path_rewards[-1]) + " " + str(avg_reward))
+            #     print(total_step, env_sampler.path_rewards[-1], avg_reward)
+            #     '''
+            #     env_sampler.current_state = None
+            #     sum_reward = 0
+            #     done = False
+            #     test_step = 0
 
-                while (not done) and (test_step != args.max_path_length):
-                    cur_state, action, next_state, reward, done = env_sampler.sample(agent, eval_t=True)
-                    sum_reward += reward
-                    test_step += 1
-                print("Score: " + str(sum_reward))
+            #     while (not done) and (test_step != args.max_path_length):
+            #         cur_state, action, next_state, reward, done = env_sampler.sample(agent, eval_t=True)
+            #         sum_reward += reward
+            #         test_step += 1
+            #     print("Score: " + str(sum_reward))
 
 
-                # this is very raw yet, need to do it better
-                scores.append(sum_reward)
-                score_steps.append(total_step)
-                plt.plot(score_steps, scores)
-                plt.savefig('./plot.png')
+            #     # this is very raw yet, need to do it better
+            #     scores.append(sum_reward)
+            #     score_steps.append(total_step)
+            #     plt.plot(score_steps, scores)
+            #     plt.savefig('./plot.png')
 
 
 def exploration_before_start(args, env_sampler, env_pool, agent):
