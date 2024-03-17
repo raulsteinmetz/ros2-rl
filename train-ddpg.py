@@ -1,7 +1,7 @@
 import rclpy
 from util.trainer import Trainer
 from util.save_csv import save_rewards_scores
-from networks.ddpg.ddpg_torch import Agent
+from model_free.ddpg.ddpg_torch import Agent
 import pandas as pd
 
 

@@ -1,7 +1,7 @@
-add model based networks
-ideia: aumentar target no começo
-ideia: reward negativa por andar demais (pega a velocidade das rodas e multiplica por um peso pequeno)
-ideia: talvez voltar na ideia da reward de acordo com a distancia
-ideia: diferenciar punições - criar uma reward negativa de não encontrar o target, menor do que a reward de colisão.
-correcao: targets do stage_4 estao dando respawn em cima das paredes.
-correcao: em alguns raros casos, mesmo depois de corrigido previamente, o target ainda não dá respawn.
+1. refazer experimentos contando steps
+2. organizar codigo mbpo e folders
+3. plugar sac original, td3 e ddpg no mbpo
+4. treinos mbpo
+5. env mais difícil
+6. testes em env conhecido e extra
+7. escrita artigo

@@ -1,7 +1,7 @@
 import pandas as pd
 import rclpy
 from util.trainer import Trainer
-from networks.td3.td3_torch import Agent
+from model_free.td3.td3_torch import Agent
 
 def main(args=None):
     rclpy.init(args=args)

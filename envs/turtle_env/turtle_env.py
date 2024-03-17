@@ -271,26 +271,22 @@ class Env(Node):
         rclpy.spin_until_future_complete(self, future)
         self.handle_despawn_result(future)
 
-    def step(self, action, max_steps_per_episode, discrete, stage):
+    def step(self, action, max_steps_per_episode):
         """
         Execute a step in the environment based on the given action.
 
         :param action: The action to be executed.
         :param step: Current step count in the episode.
         :param max_steps_per_episode: Maximum number of steps in an episode.
-        :param discrete: Flag indicating if the action space is discrete.
         :param stage: Current stage of the training.
         :return: Reward for the step, a boolean indicating if the episode is done, and the next state.
         """
         rclpy.spin_once(self, timeout_sec=0.5)
-        self.publish_action(action, discrete)
+        self.publish_action(action)
 
         rclpy.spin_once(self, timeout_sec=0.5)
 
-        if discrete:
-            state_, turtle_x, turtle_y, lidar32 = self.get_state(action, action)
-        else:
-            state_, turtle_x, turtle_y, lidar32 = self.get_state(*self.process_continuous_action(action))
+        state_, turtle_x, turtle_y, lidar32 = self.get_state(*self.process_continuous_action(action))
 
         reward, done = self.get_reward(turtle_x, turtle_y, self.target_x, self.target_y, lidar32, max_steps_per_episode)
 
@@ -373,21 +369,16 @@ class Env(Node):
         else:
             self.get_logger().info("No mark to delete or deletion failed.")
 
-    def publish_action(self, action, discrete):
+    def publish_action(self, action):
         """
         Publish the robot's velocity based on the given action.
 
         :param action: The action to be executed.
-        :param discrete: Flag indicating if the action space is discrete.
         """
-        if discrete:
-            # Handle discrete actions
-            velocities = [(0.1, -.8), (0.1, -.4), (0.1, 0.0), (0.1, .4), (0.1, .8)]
-            linear_vel, angular_vel = velocities[action]
-        else:
-            # Handle continuous actions
-            linear_vel = np.abs(float(action[0]))
-            angular_vel = float(action[1]) * 2
+
+        # Handle continuous actions
+        linear_vel = np.abs(float(action[0]))
+        angular_vel = float(action[1]) * 2
 
         self.publish_vel(linear_vel, angular_vel)
 
