@@ -2,8 +2,8 @@ import os
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
-from model_based.mbpo.sac.utils import  soft_update, hard_update
-from model_based.mbpo.sac.model import GaussianPolicy, QNetwork, DeterministicPolicy
+from model_based.mbpo.original_implementation_sac.utils import  soft_update, hard_update
+from model_based.mbpo.original_implementation_sac.model import GaussianPolicy, QNetwork, DeterministicPolicy
 
 
 class SAC(object):

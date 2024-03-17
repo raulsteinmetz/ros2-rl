@@ -2,8 +2,8 @@ import torch
 import numpy as np
 from itertools import count
 
-from model_based.mbpo.sac.replay_memory import ReplayMemory
-from model_based.mbpo.sac.sac_torch import Agent
+from model_based.mbpo.original_implementation_sac.replay_memory import ReplayMemory
+from model_based.mbpo.original_implementation_sac.sac import SAC
 from model_based.mbpo.model import EnsembleDynamicsModel
 from model_based.mbpo.predict_env import PredictEnv
 from model_based.mbpo.sample_env import EnvSampler
@@ -32,7 +32,7 @@ class Hyparams:
         self.reward_size = 1
         self.replay_size = 2000000
         self.model_retain_epochs = 1
-        self.model_train_freq = 149
+        self.model_train_freq = 125
         self.rollout_batch_size = 100000
         self.epoch_length = 500
         self.rollout_min_epoch = 20
@@ -47,7 +47,7 @@ class Hyparams:
         self.max_train_repeat_per_step = 5
         self.policy_train_batch_size = 256
         self.init_exploration_steps = 2000
-        self.max_path_length = 250
+        self.max_path_length = 500
         self.cuda = True
         self.stage = 1
 
@@ -140,7 +140,7 @@ def resize_model_pool(args, rollout_length, model_pool):
 def rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length):
     state, action, reward, next_state, done = env_pool.sample_all_batch(args.rollout_batch_size)
     for i in range(rollout_length):
-        action = agent.choose_action(state)
+        action = agent.select_action(state)
         next_states, rewards, terminals = predict_env.step(state, action)
         model_pool.push_batch([(state[j], action[j], rewards[j], next_states[j], terminals[j]) for j in range(state.shape[0])])
         nonterm_mask = ~terminals.squeeze(-1)
@@ -176,7 +176,7 @@ def train_policy_repeats(args, total_step, train_step, cur_step, env_pool, model
 
         batch_reward, batch_done = np.squeeze(batch_reward), np.squeeze(batch_done)
         batch_done = (~batch_done).astype(int)
-        agent.learn((batch_state, batch_action, batch_reward, batch_next_state, batch_done))
+        agent.update_parameters((batch_state, batch_action, batch_reward, batch_next_state, batch_done), i)
 
     return args.num_train_repeat
 
@@ -191,8 +191,7 @@ def main():
     np.random.seed(hyp.seed)
 
     # main agent
-    # agent = Agent(env.num_states, env.num_actions, hyp) # old sac
-    agent = Agent(input_dims=env.num_states, max_action=env.action_upper_bound, n_actions=env.num_actions)
+    agent = SAC(env.num_states, env.num_actions, hyp)
 
     # env model ensemble
     state_size = np.prod((env.num_states, ))
