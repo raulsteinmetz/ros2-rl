@@ -97,7 +97,7 @@ class Trainer:
                 plt.ylabel("Accumulated Reward")
                 plt.legend()
                 plt.title(f'{self.algorithm_name} - Stage {self.stage}')
-                plt.savefig(f'networks/{self.algorithm_name}/acum_rwds_{self.stage}.png')
+                plt.savefig(f'model_free/{self.algorithm_name}/acum_rwds_{self.stage}.png')
 
         return acum_rwds, steps_rwds
 

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
 import os
-from networks.util.buffer import ReplayBuffer
+from model_free.util.buffer import ReplayBuffer
 
 class CriticNetwork(nn.Module):
     def __init__(self, beta, input_dims, fc1_dims, fc2_dims, n_actions, name, chkpt_dir='tmp/td3'):
@@ -138,7 +138,7 @@ class ActorNetwork(nn.Module):
 
 class Agent:
     def __init__(self, alpha=0.001, beta=0.001, input_dims=0.005, tau=0.005, 
-                 max_action=0, min_action=0, gamma=0.99, update_actor_interval=4, 
+                 max_action=0, min_action=0, gamma=0.99, update_actor_interval=2, 
                  warmup=1000, n_actions=2, max_size=100000, layer1_size=400, 
                  layer2_size=300, batch_size=128, noise=0.1, checkpoint_dir='tmp/td3'):
         """
