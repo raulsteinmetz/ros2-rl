@@ -2,9 +2,9 @@ import os
 import numpy as np
 import torch as T
 import torch.nn.functional as F
-from networks.ddpg.networks import ActorNetwork, CriticNetwork
-from networks.ddpg.noise import OUActionNoise
-from networks.util.buffer import ReplayBuffer
+from model_free.ddpg.networks import ActorNetwork, CriticNetwork
+from model_free.ddpg.noise import OUActionNoise
+from model_free.util.buffer import ReplayBuffer
 
 class Agent:
     def __init__(self, alpha=0.0001, beta=0.001, tau=0.001, n_actions=0, input_dims=0,
