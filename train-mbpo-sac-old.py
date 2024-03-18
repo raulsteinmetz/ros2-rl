@@ -47,11 +47,11 @@ class Hyparams:
         self.max_train_repeat_per_step = 5
         self.policy_train_batch_size = 256
         self.init_exploration_steps = 2000
-        self.max_path_length = 500
+        self.max_steps = 250
         self.cuda = True
-        self.stage = 1
+        self.stage = 4
 
-def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
+def train(args, env_sampler, predict_env, agent, env_pool, model_pool, env):
     total_step = 0
     rollout_length = 1
     n_steps = args.init_exploration_steps
@@ -60,7 +60,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
     scores = []
     score_steps = []
 
-    exploration_before_start(args, env_sampler, env_pool, agent)
+    exploration_before_start(args, env_sampler, env_pool, agent, args.max_steps)
 
     for epoch_step in range(args.num_epoch):
         print(f'Epoch {epoch_step}')
@@ -86,7 +86,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
                 rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length)
                 env_sampler.env.unpause_simulation()
 
-            cur_state, action, next_state, reward, done = env_sampler.sample(agent) # real step
+            cur_state, action, next_state, reward, done = env_sampler.sample(agent, args.max_steps) # real step
             env_pool.push(cur_state, action, reward, next_state, done)
 
             if done == True:
@@ -94,7 +94,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
                 score_steps.append(n_steps)
 
             if len(env_pool) > args.min_pool_size:
-                train_policy_steps += train_policy_repeats(args, total_step, train_policy_steps, cur_step, env_pool, model_pool, agent)
+                train_policy_steps += train_policy_repeats(args, total_step, train_policy_steps, cur_step, env_pool, model_pool, agent, env)
 
             total_step += 1
             n_steps += 1
@@ -103,9 +103,9 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
     return scores, score_steps
 
 
-def exploration_before_start(args, env_sampler, env_pool, agent):
+def exploration_before_start(args, env_sampler, env_pool, agent, max_steps):
     for i in range(args.init_exploration_steps):
-        cur_state, action, next_state, reward, done = env_sampler.sample(agent)
+        cur_state, action, next_state, reward, done = env_sampler.sample(agent, max_steps)
         env_pool.push(cur_state, action, reward, next_state, done)
 
 
@@ -149,12 +149,14 @@ def rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length
         state = next_states[nonterm_mask]
 
 
-def train_policy_repeats(args, total_step, train_step, cur_step, env_pool, model_pool, agent):
+def train_policy_repeats(args, total_step, train_step, cur_step, env_pool, model_pool, agent, env):
     if total_step % args.train_every_n_steps > 0:
         return 0
 
     if train_step > args.max_train_repeat_per_step * total_step:
         return 0
+
+    # env.pause_simulation() -> makes it too slow
 
     for i in range(args.num_train_repeat):
         env_batch_size = int(args.policy_train_batch_size * args.real_ratio)
@@ -177,6 +179,8 @@ def train_policy_repeats(args, total_step, train_step, cur_step, env_pool, model
         batch_reward, batch_done = np.squeeze(batch_reward), np.squeeze(batch_done)
         batch_done = (~batch_done).astype(int)
         agent.update_parameters((batch_state, batch_action, batch_reward, batch_next_state, batch_done), i)
+
+    # env.unpause_simulation()
 
     return args.num_train_repeat
 
@@ -211,10 +215,10 @@ def main():
     model_exp_replay = ReplayMemory(new_pool_size)
 
     # for real env samples
-    env_sampler = EnvSampler(env, stage=hyp.stage, max_path_length=hyp.max_path_length)
+    env_sampler = EnvSampler(env, stage=hyp.stage)
 
     # train function
-    scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_exp_replay, model_exp_replay)
+    scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_exp_replay, model_exp_replay, env)
 
     # training data
     df = pd.DataFrame({'scores': scores, 'steps':score_steps})

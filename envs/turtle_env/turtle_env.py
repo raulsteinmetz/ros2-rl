@@ -219,12 +219,15 @@ class Env(Node):
         if distance < REACH_TRESHOLD:
             done = True
             reward = 100
+            print('[log] Turtlebot3 reached target') # debug
         elif np.min(lidar_32) < COLISION_TRESHOLD:
             done = True
             reward = -10
+            print('[log] Turtlebot3 colided with object') # debug
         elif self.step_counter >= (max_steps - 1):
             done = True
             reward = -10
+            print('[log] Turtlebot3 reached step limit') # debug
 
         return reward, done
 
