@@ -14,7 +14,7 @@ class EnvSampler():
             self.current_state = self.env.reset_simulation(self.stage)
 
         cur_state = self.current_state
-        action = agent.select_action(self.current_state)
+        action = agent.choose_action(self.current_state)
         reward, terminal, next_state = self.env.step(action, 250)
         self.path_length += 1
         self.sum_reward += reward

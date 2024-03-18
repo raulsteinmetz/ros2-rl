@@ -106,7 +106,7 @@ class Agent:
         self.critic_1.load_checkpoint()
         self.critic_2.load_checkpoint()
 
-    def learn(self, memory):
+    def learn(self, memory): # problem is definetely here :(, with the state, state_, ... tensors being wrong
         """
         Train the agent from a batch of experiences in the replay buffer.
         """
