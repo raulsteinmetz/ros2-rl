@@ -2,8 +2,8 @@ import torch
 import numpy as np
 from itertools import count
 
-from model_based.mbpo.original_implementation_sac.replay_memory import ReplayMemory
-from model_based.mbpo.original_implementation_sac.sac import SAC
+from model_based.mbpo.sac.replay_memory import ReplayMemory
+from model_based.mbpo.sac.sac import SAC
 from model_based.mbpo.model import EnsembleDynamicsModel
 from model_based.mbpo.predict_env import PredictEnv
 from model_based.mbpo.sample_env import EnvSampler
@@ -195,7 +195,7 @@ def main():
     np.random.seed(hyp.seed)
 
     # main agent
-    agent = SAC(env.num_states, env.num_actions, hyp)
+    agent = SAC(env.num_states, env.num_actions, hyp, fc1_dims=150, fc2_dims=256)
 
     # env model ensemble
     state_size = np.prod((env.num_states, ))

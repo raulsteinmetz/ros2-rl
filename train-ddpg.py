@@ -26,14 +26,5 @@ def main(args=None):
 
     save_rewards_scores(scores, steps, network)
 
-    # # Create a DataFrame from the scores list
-    # df = pd.DataFrame({'scores': scores, 'steps':steps})
-
-    # # Add an 'episode' index column
-    # df.index.name = 'episode'
-
-    # # Save the DataFrame to a CSV file
-    # df.to_csv('networks/ddpg/scores.csv')
-
 if __name__ == '__main__':
     main()

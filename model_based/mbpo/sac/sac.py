@@ -2,12 +2,12 @@ import os
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
-from model_based.mbpo.original_implementation_sac.utils import  soft_update, hard_update
-from model_based.mbpo.original_implementation_sac.model import GaussianPolicy, QNetwork, DeterministicPolicy
+from model_based.mbpo.sac.utils import  soft_update, hard_update
+from model_based.mbpo.sac.model import GaussianPolicy, QNetwork, DeterministicPolicy
 
 
 class SAC(object):
-    def __init__(self, num_inputs, action_space, hyp):
+    def __init__(self, num_inputs, action_space, hyp, fc1_dims, fc2_dims):
         torch.autograd.set_detect_anomaly(True)
         self.gamma = hyp.gamma
         self.tau = hyp.tau
@@ -19,10 +19,10 @@ class SAC(object):
 
         self.device = torch.device("cuda")
 
-        self.critic = QNetwork(num_inputs, action_space, hyp.hidden_size).to(device=self.device)
+        self.critic = QNetwork(num_inputs, action_space, fc1_dims, fc2_dims).to(device=self.device)
         self.critic_optim = Adam(self.critic.parameters(), lr=hyp.lr)
 
-        self.critic_target = QNetwork(num_inputs, action_space, hyp.hidden_size).to(self.device)
+        self.critic_target = QNetwork(num_inputs, action_space, fc1_dims, fc2_dims).to(self.device)
         hard_update(self.critic_target, self.critic)
 
         if self.policy_type == "Gaussian":
@@ -32,7 +32,7 @@ class SAC(object):
                 self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
                 self.alpha_optim = Adam([self.log_alpha], lr=hyp.lr)
 
-            self.policy = GaussianPolicy(num_inputs, action_space, hyp.hidden_size, action_space).to(self.device)
+            self.policy = GaussianPolicy(num_inputs, action_space, fc1_dims, fc2_dims, action_space).to(self.device)
             self.policy_optim = Adam(self.policy.parameters(), lr=hyp.lr)
 
         else:
