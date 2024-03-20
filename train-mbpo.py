@@ -22,34 +22,31 @@ class Hyparams:
         self.tau = 0.005
         self.alpha = 0.2
         self.policy = "Gaussian"
-        self.target_update_interval = 1
         self.automatic_entropy_tuning = False
         self.hidden_size = 256
-        self.lr = 0.0003
+        self.lr = 0.0003 # reduce maybe
         self.num_networks = 7
         self.num_elites = 5
         self.pred_hidden_size = 200
         self.reward_size = 1
         self.replay_size = 2000000
         self.model_retain_epochs = 1
-        self.model_train_freq = 125
+        self.model_train_freq = 249
         self.rollout_batch_size = 100000
-        self.epoch_length = 500
+        self.epoch_length = 1000
         self.rollout_min_epoch = 20
         self.rollout_max_epoch = 150
         self.rollout_min_length = 1
         self.rollout_max_length = 15
         self.num_epoch = 100
         self.min_pool_size = 1000
-        self.real_ratio = 0.05
-        self.train_every_n_steps = 1
-        self.num_train_repeat = 20
-        self.max_train_repeat_per_step = 5
+        self.real_ratio = 0.05 # decay on this might be an intersting idea, start at a higher value and decrement as the model gets better
+        self.train_every_n_steps = 2 # was 1
         self.policy_train_batch_size = 256
-        self.init_exploration_steps = 2000
-        self.max_steps = 250
+        self.init_exploration_steps = 5000
+        self.max_steps = 350
         self.cuda = True
-        self.stage = 4
+        self.stage = 1
 
 def train(args, env_sampler, predict_env, agent, env_pool, model_pool, env):
     total_step = 0
@@ -94,7 +91,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool, env):
                 score_steps.append(n_steps)
 
             if len(env_pool) > args.min_pool_size:
-                train_policy_steps += train_policy_repeats(args, total_step, train_policy_steps, cur_step, env_pool, model_pool, agent, env)
+                train_policy_repeats(args, total_step, cur_step, env_pool, model_pool, agent, env)
 
             total_step += 1
             n_steps += 1
@@ -149,41 +146,34 @@ def rollout_model(args, predict_env, agent, model_pool, env_pool, rollout_length
         state = next_states[nonterm_mask]
 
 
-def train_policy_repeats(args, total_step, train_step, cur_step, env_pool, model_pool, agent, env):
+def train_policy_repeats(args, total_step, cur_step, env_pool, model_pool, agent, env):
     if total_step % args.train_every_n_steps > 0:
         return 0
 
-    if train_step > args.max_train_repeat_per_step * total_step:
-        return 0
 
-    # env.pause_simulation() -> makes it too slow
+    env_batch_size = int(args.policy_train_batch_size * args.real_ratio)
+    model_batch_size = args.policy_train_batch_size - env_batch_size
 
-    for i in range(args.num_train_repeat):
-        env_batch_size = int(args.policy_train_batch_size * args.real_ratio)
-        model_batch_size = args.policy_train_batch_size - env_batch_size
 
-        env_state, env_action, env_reward, env_next_state, env_done = env_pool.sample(int(env_batch_size))
+    env_state, env_action, env_reward, env_next_state, env_done = env_pool.sample(int(env_batch_size))
 
-        if model_batch_size > 0 and len(model_pool) > 0:
-            model_state, model_action, model_reward, model_next_state, model_done = model_pool.sample_all_batch(int(model_batch_size))
-            batch_state, batch_action, batch_reward, batch_next_state, batch_done = np.concatenate((env_state, model_state), axis=0), \
-                                                                                    np.concatenate((env_action, model_action),
-                                                                                                   axis=0), np.concatenate(
-                (np.reshape(env_reward, (env_reward.shape[0], -1)), model_reward), axis=0), \
-                                                                                    np.concatenate((env_next_state, model_next_state),
-                                                                                                   axis=0), np.concatenate(
-                (np.reshape(env_done, (env_done.shape[0], -1)), model_done), axis=0)
-        else:
-            batch_state, batch_action, batch_reward, batch_next_state, batch_done = env_state, env_action, env_reward, env_next_state, env_done
+    if model_batch_size > 0 and len(model_pool) > 0:
+        model_state, model_action, model_reward, model_next_state, model_done = model_pool.sample_all_batch(int(model_batch_size))
+        batch_state, batch_action, batch_reward, batch_next_state, batch_done = np.concatenate((env_state, model_state), axis=0), \
+                                                                                np.concatenate((env_action, model_action),
+                                                                                                axis=0), np.concatenate(
+            (np.reshape(env_reward, (env_reward.shape[0], -1)), model_reward), axis=0), \
+                                                                                np.concatenate((env_next_state, model_next_state),
+                                                                                                axis=0), np.concatenate(
+            (np.reshape(env_done, (env_done.shape[0], -1)), model_done), axis=0)
+    else:
+        batch_state, batch_action, batch_reward, batch_next_state, batch_done = env_state, env_action, env_reward, env_next_state, env_done
 
-        batch_reward, batch_done = np.squeeze(batch_reward), np.squeeze(batch_done)
-        batch_done = (~batch_done).astype(int)
-        agent.update_parameters((batch_state, batch_action, batch_reward, batch_next_state, batch_done), i)
 
-    # env.unpause_simulation()
-
-    return args.num_train_repeat
-
+    batch_reward, batch_done = np.squeeze(batch_reward), np.squeeze(batch_done)
+    batch_done = (~batch_done).astype(int)
+    agent.update_parameters((batch_state, batch_action, batch_reward, batch_next_state, batch_done))
+    
 
 def main():
     rclpy.init() # for env ros2 node creation

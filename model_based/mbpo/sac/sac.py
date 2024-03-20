@@ -14,7 +14,6 @@ class SAC(object):
         self.alpha = hyp.alpha
 
         self.policy_type = hyp.policy
-        self.target_update_interval = hyp.target_update_interval
         self.automatic_entropy_tuning = hyp.automatic_entropy_tuning
 
         self.device = torch.device("cuda")
@@ -49,7 +48,7 @@ class SAC(object):
             _, _, action = self.policy.sample(state)
         return action.detach().cpu().numpy()[0]
 
-    def update_parameters(self, memory, updates):
+    def update_parameters(self, memory):
         # Sample a batch from memory
         # state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(batch_size=batch_size)
         state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory
@@ -101,8 +100,7 @@ class SAC(object):
             alpha_tlogs = torch.tensor(self.alpha) # For TensorboardX logs
 
 
-        if updates % self.target_update_interval == 0:
-            soft_update(self.critic_target, self.critic, self.tau)
+        soft_update(self.critic_target, self.critic, self.tau)
 
         return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
 

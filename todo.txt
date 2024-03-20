@@ -1,7 +1,7 @@
+0. codigo gym para testar arquiteturas mais rapido
 1. refazer experimentos contando steps
 2. organizar codigo mbpo e folders
-3. plugar sac original, td3 e ddpg no mbpo
-4. treinos mbpo
-5. env mais difícil
-6. testes em env conhecido e extra
-7. escrita artigo
+3. treinos mbpo -> talvez aumentar max_steps e rollout size, fazer aprender a cada n steps, e dai da pra pausar a simulação pro learn function  
+4. env mais difícil
+5. testes em env conhecido e extra
+6. escrita artigo
