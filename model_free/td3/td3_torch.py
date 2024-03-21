@@ -138,7 +138,7 @@ class ActorNetwork(nn.Module):
 
 class Agent:
     def __init__(self, alpha=0.001, beta=0.001, input_dims=0.005, tau=0.005, 
-                 max_action=0, min_action=0, gamma=0.99, update_actor_interval=2, 
+                 max_action=0, min_action=0, gamma=0.99, update_actor_interval=8, 
                  warmup=1000, n_actions=2, max_size=100000, layer1_size=400, 
                  layer2_size=300, batch_size=128, noise=0.1, checkpoint_dir='tmp/td3'):
         """

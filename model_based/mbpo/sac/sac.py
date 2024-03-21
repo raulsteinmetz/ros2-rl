@@ -7,21 +7,22 @@ from model_based.mbpo.sac.model import GaussianPolicy, QNetwork, DeterministicPo
 
 
 class SAC(object):
-    def __init__(self, num_inputs, action_space, hyp, fc1_dims, fc2_dims):
+    def __init__(self, num_inputs, action_space, hyp):
         torch.autograd.set_detect_anomaly(True)
         self.gamma = hyp.gamma
         self.tau = hyp.tau
         self.alpha = hyp.alpha
 
         self.policy_type = hyp.policy
+        self.target_update_interval = hyp.target_update_interval
         self.automatic_entropy_tuning = hyp.automatic_entropy_tuning
 
         self.device = torch.device("cuda")
 
-        self.critic = QNetwork(num_inputs, action_space, fc1_dims, fc2_dims).to(device=self.device)
+        self.critic = QNetwork(num_inputs, action_space, hyp.hidden_size).to(device=self.device)
         self.critic_optim = Adam(self.critic.parameters(), lr=hyp.lr)
 
-        self.critic_target = QNetwork(num_inputs, action_space, fc1_dims, fc2_dims).to(self.device)
+        self.critic_target = QNetwork(num_inputs, action_space, hyp.hidden_size).to(self.device)
         hard_update(self.critic_target, self.critic)
 
         if self.policy_type == "Gaussian":
@@ -31,7 +32,7 @@ class SAC(object):
                 self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
                 self.alpha_optim = Adam([self.log_alpha], lr=hyp.lr)
 
-            self.policy = GaussianPolicy(num_inputs, action_space, fc1_dims, fc2_dims, action_space).to(self.device)
+            self.policy = GaussianPolicy(num_inputs, action_space, hyp.hidden_size, action_space).to(self.device)
             self.policy_optim = Adam(self.policy.parameters(), lr=hyp.lr)
 
         else:
@@ -48,7 +49,7 @@ class SAC(object):
             _, _, action = self.policy.sample(state)
         return action.detach().cpu().numpy()[0]
 
-    def update_parameters(self, memory):
+    def update_parameters(self, memory, updates):
         # Sample a batch from memory
         # state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(batch_size=batch_size)
         state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory
@@ -100,7 +101,8 @@ class SAC(object):
             alpha_tlogs = torch.tensor(self.alpha) # For TensorboardX logs
 
 
-        soft_update(self.critic_target, self.critic, self.tau)
+        if updates % self.target_update_interval == 0:
+            soft_update(self.critic_target, self.critic, self.tau)
 
         return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
 
