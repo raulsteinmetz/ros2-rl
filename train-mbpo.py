@@ -55,7 +55,7 @@ class Hyparams:
         self.num_train_repeat = 20
         self.max_train_repeat_per_step = 5
         self.policy_train_batch_size = 256
-        self.init_exploration_steps = 2000 # was 5000
+        self.init_exploration_steps = 4000 # was 5000
         self.max_path_length = 300 # was 1000
         self.cuda = True
 
@@ -94,7 +94,7 @@ def train(args, env_sampler, predict_env, agent, env_pool, model_pool):
             cur_state, action, next_state, reward, done = env_sampler.sample(agent) # real step
             env_pool.push(cur_state, action, reward, next_state, done)
 
-            if done == True:
+            if done:
                 scores.append(reward)
                 score_steps.append(n_steps)
 
@@ -224,7 +224,7 @@ def main():
     model_pool = ReplayMemory(new_pool_size)
 
     # Sampler of environment
-    env_sampler = EnvSampler(env, stage=2, max_path_length=hyp.max_path_length,)
+    env_sampler = EnvSampler(env, stage=1, max_path_length=hyp.max_path_length)
 
     scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_pool, model_pool)
 

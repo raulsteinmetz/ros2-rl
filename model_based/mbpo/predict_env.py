@@ -10,10 +10,9 @@ class PredictEnv:
         # Check if any of the first 10 lidar readings in each observation are below 0.19
         lidar_condition = np.any(next_obs[:, :10] < 0.19, axis=1)
 
-        # Check if the distance to the target (11th element) in each observation is below 0.3
-        target_distance_condition = next_obs[:, 10] < 0.3
+        # Check if the distance to the target (11th element) in each observation is below 0.5
+        target_distance_condition = next_obs[:, 10] < 0.5
 
-        # Combine the conditions to determine if an episode is done
         # An episode is done if either condition is True
         done = lidar_condition | target_distance_condition
 

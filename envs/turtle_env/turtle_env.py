@@ -19,10 +19,13 @@ from gazebo_msgs.srv import SpawnEntity, DeleteEntity, GetEntityState, SetEntity
 from torch.utils.tensorboard import SummaryWriter
 
 
-REACH_TRESHOLD = 0.3
+REACH_TRESHOLD = 0.5
 LIDAR_DISCRETIZATION = 10
 LIDAR_MAX_RANGE = 3.5
 COLISION_TRESHOLD = 0.19
+EASE_DECAY = 0.001
+EASE_BEGIN = 0.75
+EASE_MIN = 0.05
 
 class Env(Node):
     """
@@ -101,6 +104,9 @@ class Env(Node):
         self.action_lower_bound = -.25
 
         self.step_counter = 0
+        self.ease = EASE_BEGIN
+
+        self.reached = False
 
     def odom_callback(self, msg):
         """
@@ -153,6 +159,10 @@ class Env(Node):
         return state, turtle_x, turtle_y, lidar
 
 
+    def respawn_target(self, stage):
+        self.despawn_target_mark()
+        self.spawn_target_in_environment(stage)
+
 
     def reset_simulation(self, stage):
         """
@@ -161,16 +171,21 @@ class Env(Node):
         :param stage: The stage of training or simulation scenario.
         :return: The initial state of the environment after reset.
         """
+
+        
         # Resetting the environment
         self.step_counter = 0
-        req = Empty.Request()
-        while not self.reset_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().warn('Reset service not available, waiting again...')
-        
-        self.reset_client.call_async(req)
-        self.despawn_target_mark()
 
-        self.spawn_target_in_environment(stage)
+        if self.reached == False:
+            req = Empty.Request()
+            while not self.reset_client.wait_for_service(timeout_sec=1.0):
+                self.get_logger().warn('Reset service not available, waiting again...')
+            
+            self.reset_client.call_async(req)
+
+        self.pause_simulation()
+        self.respawn_target(stage)
+        self.unpause_simulation()
         
         self.publish_vel(0.0, 0.0)
 
@@ -182,6 +197,8 @@ class Env(Node):
             sleep(0.1)
 
         state, _, _, _ = self.get_state(0, 0)
+
+        
         return state
 
     def publish_vel(self, linear_vel, angular_vel):
@@ -196,7 +213,7 @@ class Env(Node):
         cmd_vel_msg.angular.z = angular_vel
         self.cmd_vel_publisher.publish(cmd_vel_msg)
 
-    def get_reward(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps):
+    def get_reward_and_done(self, turtle_x, turtle_y, target_x, target_y, lidar_32, max_steps, stage):
         """
         Calculate the reward based on the current state of the environment.
 
@@ -217,14 +234,17 @@ class Env(Node):
 
         # Determine reward and done state based on proximity to target and collision data
         if distance < REACH_TRESHOLD:
+            self.reached = True
             done = True
             reward = 100
             print('[log] Turtlebot3 reached target') # debug
         elif np.min(lidar_32) < COLISION_TRESHOLD:
+            self.reached = False
             done = True
             reward = -10
             print('[log] Turtlebot3 colided with object') # debug
         elif self.step_counter >= (max_steps - 1):
+            self.reached = False
             done = True
             reward = -10
             print('[log] Turtlebot3 reached step limit') # debug
@@ -274,7 +294,7 @@ class Env(Node):
         rclpy.spin_until_future_complete(self, future)
         self.handle_despawn_result(future)
 
-    def step(self, action, max_steps_per_episode):
+    def step(self, action, max_steps_per_episode, stage):
         """
         Execute a step in the environment based on the given action.
 
@@ -291,7 +311,7 @@ class Env(Node):
 
         state_, turtle_x, turtle_y, lidar32 = self.get_state(*self.process_continuous_action(action))
 
-        reward, done = self.get_reward(turtle_x, turtle_y, self.target_x, self.target_y, lidar32, max_steps_per_episode)
+        reward, done = self.get_reward_and_done(turtle_x, turtle_y, self.target_x, self.target_y, lidar32, max_steps_per_episode, stage)
 
         self.step_counter += 1
 
@@ -305,51 +325,103 @@ class Env(Node):
         :return: A tuple (x, y) representing the target's position.
         """
 
-        # generate random position for the target mark
         if stage == 1:
-            self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
-            self.target_y = random.uniform(-1.90, 1.90)
+            easy = [(0, 0.8), (0.8, 0), (0, -0.8), (-0.8, 0), \
+                    (0, 1.2), (1.2, 0), (0, -1.2), (-1.2, 0)]
+            hard = [(1, 1,), (1, -1), (-1, 1), (-1, -1), \
+                    (1.5, 1.5), (1.5, -1.5), (-1.5, 1.5), (-1.5, -1.5), \
+                    (1.8, 1.8), (1.8, -1.8), (-1.8, 1.8), (-1.8, -1.8)]
+            
+            # this is a training configuration
+            # TODO: test configuration
+
+            if np.random.random() < self.ease:
+                points = easy
+            else:
+                points = hard
+
+
+            point = points[np.random.randint(len(points))]
+            noise_x, noise_y = np.random.normal(0, 0.15, 2)
+            noisy_point = (point[0] + noise_x, point[1] + noise_y)
+            self.target_x, self.target_y = noisy_point
+
         elif stage == 2:
-            area = np.random.randint(0, 5)
-            if area == 0: 
-                self.target_x = random.uniform(-1.90, 1.90)
-                self.target_y = random.uniform(-1.5, -1.9) 
-            elif area == 1:
-                self.target_x = random.uniform(-1.90, 1.90)
-                self.target_y = random.uniform(1.5, 1.9) 
-            elif area == 2:
-                self.target_x = random.uniform(1.5, 1.9)
-                self.target_y = random.uniform(-1.90, 1.90)
-            elif area == 3:
-                self.target_x = random.uniform(-1.5, -1.9)
-                self.target_y = random.uniform(-1.90, 1.90)
-            elif area == 4:
-                self.target_x = random.uniform(-1.2, 1.2)
-                self.target_y = random.uniform(-1.2, 1.2)
+            easy = [(0, 0.8), (0.8, 0), (0, -0.8), (-0.8, 0), \
+                    (0, 1.2), (1.2, 0), (0, -1.2), (-1.2, 0)]
+            medium = [(0, 1.5), (1.5, 0), (0, -1.5), (-1.5, 0), \
+                      (0, 1.8), (1.8, 0), (0, -1.8), (-1.8, 0)]
+            hard = [(1.7, 1), (-1.7, 1), (1.7, -1), (-1.7, -1), \
+                    (1, 1.7), (-1, 1.7), (1, -1.7), (-1, -1.7), \
+                    (1.8, 1.8), (1.8, -1.8), (-1.8, 1.8), (-1.8, -1.8)]
+            
+            if np.random.random() < self.ease: # easy, medium
+                if np.random.random() < 0.5:
+                    points = easy
+                else:
+                    points = medium
+            else:
+                print('NOT_EASY')
+                if np.random.random() < 0.5: # hard, medium
+                    points = hard
+                else:
+                    points = medium
 
 
-        elif stage == 3:
-            areas = [(0.4, 0.4), (0.8, 1.7), (0.2, 1.9), (1.9, 0.4), (1.9, -1), (1.9, -1.9), 
-                        (0.5, -1.9), (-1.8, 1.5), (-1.5, 1.8), (-1.5, -1.5), (-1.2, -1.2), 
-                        (-1.5, 0), (0, -1.5), (0.5, 1), (0.8, 8.8), (0.4, 1.9), (-1.7, -1.9),
-                        (1.4, 1.9), (1, 1.9), (0.2, 1.9), (0.3, 1.9), (0.4, 1.9), (0.5, 1.9),
-                        (0, 1.9), (-0.5, 1.9), (-0.8, 1.9), (-1.5, 1.9), (-1.7, 1.9), (-1.3, 1.9),
-                        (-1, 2.0), (2.0, -1.5), (2.0, -1.2), (2.0, -1), (2.0, -0.8), (2.0, -1.8),
-                        (1.5, -1.8), (1.2, -1.8), (1.0, -1.8),(0.0, -1.8), (-0.5, -1.8),
-                        (-1.5, -1.8), (-1.8, -1.5), (-1.7, -1.7), (-1.5, -1.9), (-1.9, -1.2),
-                        (1.9, -1.5), (1.9, -1.2),(1.9, -0.5),(1.9, -0.8),(1.9, -0.8),(1.9, 0.5)]
-            chosen_point = random.choice(areas)
-            self.target_x, self.target_y = chosen_point
-        elif stage == 4:
-            points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5),
-                        (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), 
-                        (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2),
-                        (-1.8, -1.8), (-1.8, -0.5), (-1.8, -1), (-1.8, -1.5),
-                        (-1.6, -1.6), (-1.5, -1.5), (-1.2, -1.2), (-1.3, -1.3)]
-            chosen_point = random.choice(points)
-            self.target_x, self.target_y = chosen_point
+            point = points[np.random.randint(len(points))]
+            noise_x, noise_y = np.random.normal(0, 0.15, 2)
+            noisy_point = (point[0] + noise_x, point[1] + noise_y)
+            self.target_x, self.target_y = noisy_point
 
+        self.ease = self.ease - EASE_DECAY if self.ease > EASE_MIN else EASE_MIN
         return self.target_x, self.target_y
+
+
+        # # generate random position for the target mark
+        # if stage == 1:
+        #     self.target_x = random.uniform(-1.90, 1.90)  # Adjust the range to fit your environment
+        #     self.target_y = random.uniform(-1.90, 1.90)
+        # elif stage == 2:
+        #     area = np.random.randint(0, 5)
+        #     if area == 0: 
+        #         self.target_x = random.uniform(-1.90, 1.90)
+        #         self.target_y = random.uniform(-1.5, -1.9) 
+        #     elif area == 1:
+        #         self.target_x = random.uniform(-1.90, 1.90)
+        #         self.target_y = random.uniform(1.5, 1.9) 
+        #     elif area == 2:
+        #         self.target_x = random.uniform(1.5, 1.9)
+        #         self.target_y = random.uniform(-1.90, 1.90)
+        #     elif area == 3:
+        #         self.target_x = random.uniform(-1.5, -1.9)
+        #         self.target_y = random.uniform(-1.90, 1.90)
+        #     elif area == 4:
+        #         self.target_x = random.uniform(-1.2, 1.2)
+        #         self.target_y = random.uniform(-1.2, 1.2)
+
+
+        # elif stage == 3:
+        #     areas = [(0.4, 0.4), (0.8, 1.7), (0.2, 1.9), (1.9, 0.4), (1.9, -1), (1.9, -1.9), 
+        #                 (0.5, -1.9), (-1.8, 1.5), (-1.5, 1.8), (-1.5, -1.5), (-1.2, -1.2), 
+        #                 (-1.5, 0), (0, -1.5), (0.5, 1), (0.8, 8.8), (0.4, 1.9), (-1.7, -1.9),
+        #                 (1.4, 1.9), (1, 1.9), (0.2, 1.9), (0.3, 1.9), (0.4, 1.9), (0.5, 1.9),
+        #                 (0, 1.9), (-0.5, 1.9), (-0.8, 1.9), (-1.5, 1.9), (-1.7, 1.9), (-1.3, 1.9),
+        #                 (-1, 2.0), (2.0, -1.5), (2.0, -1.2), (2.0, -1), (2.0, -0.8), (2.0, -1.8),
+        #                 (1.5, -1.8), (1.2, -1.8), (1.0, -1.8),(0.0, -1.8), (-0.5, -1.8),
+        #                 (-1.5, -1.8), (-1.8, -1.5), (-1.7, -1.7), (-1.5, -1.9), (-1.9, -1.2),
+        #                 (1.9, -1.5), (1.9, -1.2),(1.9, -0.5),(1.9, -0.8),(1.9, -0.8),(1.9, 0.5)]
+        #     chosen_point = random.choice(areas)
+        #     self.target_x, self.target_y = chosen_point
+        # elif stage == 4:
+        #     points = [(0.5, 1), (0, 0.8), (-.4, 0.5), (-1.5, 1.5),
+        #                 (-1.7, 0), (-1.5, -1.5), (1.7, 0), (1.7, -.8), 
+        #                 (1.7, -1.7), (0.8, -1.5), (0, -1), (-.4, -2),
+        #                 (-1.8, -1.8), (-1.8, -0.5), (-1.8, -1), (-1.8, -1.5),
+        #                 (-1.6, -1.6), (-1.5, -1.5), (-1.2, -1.2), (-1.3, -1.3)]
+        #     chosen_point = random.choice(points)
+        #     self.target_x, self.target_y = chosen_point
+
+        # return self.target_x, self.target_y
 
     def handle_spawn_result(self, future, fixed_z):
         """

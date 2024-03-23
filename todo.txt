@@ -5,3 +5,13 @@
 4. env mais difícil
 5. testes em env conhecido e extra
 6. escrita artigo
+
+
+!!! COLISION TRESHOLD TA MUITO ALTO !!!
+
+
+
+currently
+reaching target now does not reset turtle position, only episode and target position
+increasing dificulty
+new target spawns on stage 1 and 2

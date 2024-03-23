@@ -50,7 +50,7 @@ class Trainer:
             while not done:
             # and step < max_steps: # TEST: DDPG doesn't necessarily needs a stop
                 action = agent.choose_action(state)
-                reward, done, state_ = self.env.step(action, max_steps)
+                reward, done, state_ = self.env.step(action, max_steps, self.stage)
                 agent.remember(state, action, reward, state_, done)
                 state = state_
                 acum_reward += reward
