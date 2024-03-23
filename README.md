@@ -51,16 +51,4 @@ To start TensorBoard and point it to the `logdir` log directory, follow these st
 tensorboard --logdir=runs
 ```
 
-## Starting TensorBoard within the `logdir` Log Directory
-
-To start TensorBoard and point it to the `logdir` log directory, follow these steps:
-
-1. Open a terminal window.
-2. Activate your Python virtual environment or Conda environment, if you're using one.
-3. Run the following command:
-
-```bash
-
-This command will start TensorBoard and make it use the logs stored in the log directory. After executing the command, TensorBoard will provide a URL, typically http://localhost:6006, which you can open in your web browser to view your TensorBoard dashboard.
-
-Make sure that your training script is properly configured to save logs to the specified log directory for TensorBoard to display the data.
+This command will start TensorBoard and make it use the logs stored in the log directory. After executing the command, TensorBoard will provide a URL, typically ` `http://localhost:6006`, which you can open in your web browser to view your TensorBoard dashboard.
