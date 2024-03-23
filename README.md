@@ -51,9 +51,6 @@ To start TensorBoard and point it to the `logdir` log directory, follow these st
 tensorboard --logdir=runs
 ```
 
-
-markdown
-Copy code
 ## Starting TensorBoard within the `logdir` Log Directory
 
 To start TensorBoard and point it to the `logdir` log directory, follow these steps:
