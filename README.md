@@ -20,17 +20,17 @@ To modify the Deep Reinforcement Learning (DRL) stages, according to the ones in
 
    - For `launch`:
      ```bash
-     cp -r turtlebot3_gazebo/launch ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/launch
+     cp -rf turtlebot3_gazebo/launch ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/launch
      ```
    
    - For `models`:
      ```bash
-     cp -r turtlebot3_gazebo/models ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/models
+     cp -rf turtlebot3_gazebo/models ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/models
      ```
    
    - For `worlds`:
      ```bash
-     cp -r turtlebot3_gazebo/worlds ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/worlds
+     cp -rf turtlebot3_gazebo/worlds ~/ros_humble/src/turtlebot3_simulations/turtlebot3_gazebo/worlds
      ```
 
 2. **Build your project with `colcon build --symlink-install` to apply the changes:**
