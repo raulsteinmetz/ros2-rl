@@ -51,4 +51,4 @@ To start TensorBoard and point it to the `logdir` log directory, follow these st
 tensorboard --logdir=runs
 ```
 
-This command will start TensorBoard and make it use the logs stored in the log directory. After executing the command, TensorBoard will provide a URL, typically ` `http://localhost:6006`, which you can open in your web browser to view your TensorBoard dashboard.
+This command will start TensorBoard and make it use the logs stored in the log directory. After executing the command, TensorBoard will provide a URL, typically ` http://localhost:6006, which you can open in your web browser to view your TensorBoard dashboard.
