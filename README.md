@@ -38,3 +38,15 @@ To modify the Deep Reinforcement Learning (DRL) stages, according to the ones in
    cd ~/ros_humble/
    colcon build --symlink-install
     ```
+
+
+## Starting TensorBoard to monitor the loss, rewards and everything logged about each algorithm.
+To start TensorBoard and point it to the `logdir` log directory, follow these steps:
+
+1. Open a terminal window.
+2. Activate your Python virtual environment or Conda environment, if you're using one.
+3. Run the following command:
+
+```bash
+tensorboard --logdir=logs
+```
