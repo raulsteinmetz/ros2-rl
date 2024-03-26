@@ -1,0 +1,44 @@
+<?xml version='1.0'?>
+<sdf version='1.6'>
+  <model name='obstacles'>
+    <pose frame=''>0 0 0 0 0 0</pose>
+    <link name='obstacle'>
+      <collision name='obstacle_center'>
+        <pose>0 0 1.125 0 0 0</pose> <!-- Adjusted Z pose for visibility -->
+        <geometry>
+          <cylinder>
+            <radius>0.675</radius> <!-- Radius slightly reduced from the doubled size -->
+            <length>2.25</length> <!-- Length slightly reduced from the doubled size -->
+          </cylinder>
+        </geometry>
+        <max_contacts>10</max_contacts>
+        <surface>
+          <bounce/>
+          <friction>
+            <ode/>
+          </friction>
+          <contact>
+            <ode/>
+          </contact>
+        </surface>
+      </collision>
+
+      <visual name='obstacle_center'>
+        <pose>0 0 1.125 0 0 0</pose> <!-- Matching collision component -->
+        <geometry>
+          <cylinder>
+            <radius>0.675</radius> <!-- Matching the collision geometry -->
+            <length>2.25</length> <!-- Matching the collision geometry -->
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/White</name>
+          </script>
+        </material>
+      </visual>
+    </link>
+    <static>1</static>
+  </model>
+</sdf>
