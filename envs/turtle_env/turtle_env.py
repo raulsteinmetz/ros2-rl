@@ -403,6 +403,33 @@ class Env(Node):
             noisy_point = (point[0] + noise_x, point[1] + noise_y)
             self.target_x, self.target_y = noisy_point
 
+        elif stage == 5:
+            easy = [(1.6, 0.5), (0.5, 1.6), (1, 1), \
+                    (1.6, 0), (0, 1.6)]
+            medium = [(1.8, -1.8), (-1.8, 1.8), \
+                      (0, -1.5),  (-1.5, 0), \
+                      (-0.5, 1.2), (1.2, -0.5)]
+            hard = [(-1.5, -1.5), (-1.8, -1.8), \
+                    (-1.8, -0.8), (-0.8, -1.8), \
+                    (-1, -1)]
+            
+            if np.random.random() < self.ease: # easy, medium
+                if np.random.random() < 0.5:
+                    points = easy
+                else:
+                    points = medium
+            else:
+                print('NOT_EASY')
+                if np.random.random() < 0.5: # hard, medium
+                    points = hard
+                else:
+                    points = medium
+            
+            point = points[np.random.randint(len(points))]
+            noise_x, noise_y = np.random.normal(0, 0.1, 2)
+            noisy_point = (point[0] + noise_x, point[1] + noise_y)
+            self.target_x, self.target_y = noisy_point
+
         self.ease = self.ease - EASE_DECAY if self.ease > EASE_MIN else EASE_MIN
         return self.target_x, self.target_y
 

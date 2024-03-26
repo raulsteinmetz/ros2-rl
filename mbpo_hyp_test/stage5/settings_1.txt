@@ -1,0 +1,35 @@
+class Hyparams:
+    def __init__(self): # this should be further explored and optimized for turtle task
+        self.seed = 42
+        self.use_decay = True
+        self.gamma = 0.99
+        self.tau = 0.005
+        self.alpha = 0.2
+        self.policy = "Gaussian"
+        self.target_update_interval = 1
+        self.automatic_entropy_tuning = False
+        self.hidden_size = 256
+        self.lr = 0.0003
+        self.num_networks = 7
+        self.num_elites = 5
+        self.pred_hidden_size = 200
+        self.reward_size = 1
+        self.replay_size = 2000000 # was 1 million
+        self.model_retain_epochs = 1
+        self.model_train_freq = 125 # was 250
+        self.rollout_batch_size = 100000
+        self.epoch_length = 500 # was 1000
+        self.rollout_min_epoch = 20
+        self.rollout_max_epoch = 150
+        self.rollout_min_length = 1
+        self.rollout_max_length = 15
+        self.num_epoch = 150 # was 1000
+        self.min_pool_size = 1000
+        self.real_ratio = 0.05
+        self.train_every_n_steps = 1
+        self.num_train_repeat = 20
+        self.max_train_repeat_per_step = 5
+        self.policy_train_batch_size = 256
+        self.init_exploration_steps = 4000 # was 5000
+        self.max_path_length = 300 # was 1000
+        self.cuda = True
