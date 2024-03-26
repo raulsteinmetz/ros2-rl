@@ -11,7 +11,4 @@
 
 
 
-currently
-reaching target now does not reset turtle position, only episode and target position
-increasing dificulty
-new target spawns on stage 1 and 2
+go back to not respawning turtle but in env 3 and 4, create env 5

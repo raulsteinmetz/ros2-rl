@@ -106,6 +106,7 @@ class Env(Node):
         self.step_counter = 0
         self.ease = EASE_BEGIN
 
+        self.reset_when_reached = False
         self.reached = False
 
     def odom_callback(self, msg):
@@ -176,17 +177,22 @@ class Env(Node):
         # Resetting the environment
         self.step_counter = 0
 
-        if self.reached == False:
+
+        if self.reached == False or (self.reached == True and self.reset_when_reached == True):
             req = Empty.Request()
             while not self.reset_client.wait_for_service(timeout_sec=1.0):
                 self.get_logger().warn('Reset service not available, waiting again...')
-            
             self.reset_client.call_async(req)
 
-        self.pause_simulation()
-        self.respawn_target(stage)
-        self.unpause_simulation()
-        
+        if self.reset_when_reached == False:
+            self.pause_simulation()
+            self.respawn_target(stage)
+            self.unpause_simulation()
+        else:
+            self.respawn_target()
+
+
+
         self.publish_vel(0.0, 0.0)
 
         # Wait for fresh sensor reads to avoid last episode's data
@@ -348,7 +354,8 @@ class Env(Node):
 
         elif stage == 2:
             easy = [(0, 0.8), (0.8, 0), (0, -0.8), (-0.8, 0), \
-                    (0, 1.2), (1.2, 0), (0, -1.2), (-1.2, 0)]
+                    (0, 1.2), (1.2, 0), (0, -1.2), (-1.2, 0),
+                    (1, 0), (1, 0.4), (1, -0.4), (1.4, 0)]
             medium = [(0, 1.5), (1.5, 0), (0, -1.5), (-1.5, 0), \
                       (0, 1.8), (1.8, 0), (0, -1.8), (-1.8, 0)]
             hard = [(1.7, 1), (-1.7, 1), (1.7, -1), (-1.7, -1), \
@@ -369,7 +376,30 @@ class Env(Node):
 
 
             point = points[np.random.randint(len(points))]
-            noise_x, noise_y = np.random.normal(0, 0.15, 2)
+            noise_x, noise_y = np.random.normal(0, 0.1, 2)
+            noisy_point = (point[0] + noise_x, point[1] + noise_y)
+            self.target_x, self.target_y = noisy_point
+
+        elif stage == 3:
+            easy = [(1, 1), (1.8, 0.7), (0.7, 1.8), (1.9, 0), (0, 1.9)]
+            medium = [(1.9, -1), (-1, 1.9), (1.9, -1.5), (-1.5, 1.9), (1.2, -1.5), (-1.5, 1.2)]
+            hard = [(-1.9, -1.9), (-1.5, -1.5), (-1., -1.), (-1.8, -.2), (-0.8, -1.8)]
+            
+            if np.random.random() < self.ease: # easy, medium
+                if np.random.random() < 0.5:
+                    points = easy
+                else:
+                    points = medium
+            else:
+                print('NOT_EASY')
+                if np.random.random() < 0.5: # hard, medium
+                    points = hard
+                else:
+                    points = medium
+
+
+            point = points[np.random.randint(len(points))]
+            noise_x, noise_y = np.random.normal(0, 0.1, 2)
             noisy_point = (point[0] + noise_x, point[1] + noise_y)
             self.target_x, self.target_y = noisy_point
 

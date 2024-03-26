@@ -224,7 +224,7 @@ def main():
     model_pool = ReplayMemory(new_pool_size)
 
     # Sampler of environment
-    env_sampler = EnvSampler(env, stage=2, max_path_length=hyp.max_path_length)
+    env_sampler = EnvSampler(env, stage=3, max_path_length=hyp.max_path_length)
 
     scores, score_steps = train(hyp, env_sampler, predict_env, agent, env_pool, model_pool)
 

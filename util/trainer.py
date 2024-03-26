@@ -4,6 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import torch as T
 from matplotlib import pyplot as plt
+import pandas as pd
 
 class Trainer:
     def __init__(self, algorithm_name='undefined', stage=3):
@@ -98,6 +99,11 @@ class Trainer:
                 plt.legend()
                 plt.title(f'{self.algorithm_name} - Stage {self.stage}')
                 plt.savefig(f'model_free/{self.algorithm_name}/acum_rwds_{self.stage}.png')
+
+            if episode == 1 or episode % 100 == 0:
+                df = pd.DataFrame({'scores': acum_rwds, 'steps':steps_rwds})
+                df.index.name = 'episode'
+                df.to_csv(f'model_free/{self.algorithm_name}/scores.csv')
 
         return acum_rwds, steps_rwds
 
